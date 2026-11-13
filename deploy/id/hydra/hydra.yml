@@ -1,0 +1,38 @@
+# Ory Hydra config. DSN and secrets come from environment variables (see compose.yaml).
+# Login/consent/logout URLs point at the app that handles the Hydra challenges —
+# your Go backend / login UI. 127.0.0.1:4455 is a placeholder; change it to match.
+#
+# Use 127.0.0.1 everywhere (not a mix of localhost and 127.0.0.1) or cookies break.
+
+serve:
+  cookies:
+    same_site_mode: Lax
+
+urls:
+  self:
+    issuer: http://127.0.0.1:4444
+  login: http://127.0.0.1:4455/login
+  consent: http://127.0.0.1:4455/consent
+  logout: http://127.0.0.1:4455/logout
+  error: http://127.0.0.1:4455/error
+
+oidc:
+  subject_identifiers:
+    supported_types:
+      - public
+      - pairwise
+
+strategies:
+  access_token: opaque
+
+ttl:
+  access_token: 15m
+  id_token: 15m
+  refresh_token: 720h
+  auth_code: 10m
+  login_consent_request: 30m
+
+log:
+  level: info
+  format: text
+  leak_sensitive_values: false

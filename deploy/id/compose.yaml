@@ -1,0 +1,227 @@
+networks:
+  idp:
+services:
+  postgres:
+    image: registry.access.redhat.com/hi/postgresql:latest
+    container_name: commonpoint-db-identity
+    restart: unless-stopped
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata-identity:/var/lib/postgresql/data:z
+    secrets:
+      - pg_identity_pass
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_identity_pass
+      # Read by init/01-create-databases.sh to make one DB + user per service
+      HYDRA_DB_PASSWORD: ${HYDRA_DB_PASSWORD}
+      KRATOS_DB_PASSWORD: ${KRATOS_DB_PASSWORD}
+      POLIS_DB_PASSWORD: ${POLIS_DB_PASSWORD}
+      OPENFGA_DB_PASSWORD: ${OPENFGA_DB_PASSWORD}
+      TALOS_DB_PASSWORD: ${TALOS_DB_PASSWORD}
+    networks: [idp]
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-init:
+    image: registry.access.redhat.com/hi/postgresql:latest
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_identity_pass
+      # Read by init/01-create-databases.sh to make one DB + user per service
+      HYDRA_DB_PASSWORD: ${HYDRA_DB_PASSWORD}
+      KRATOS_DB_PASSWORD: ${KRATOS_DB_PASSWORD}
+      POLIS_DB_PASSWORD: ${POLIS_DB_PASSWORD}
+      OPENFGA_DB_PASSWORD: ${OPENFGA_DB_PASSWORD}
+      TALOS_DB_PASSWORD: ${TALOS_DB_PASSWORD}
+    command: ["/bin/bash", "/db-init.sh"]
+    volumes:
+      - pgdata-identity:/var/lib/postgresql/data:z
+      - ./postgres/db-init.sh:/db-init.sh:ro,z
+    depends_on:
+      postgres:
+        condition: service_healthy
+    secrets:
+      - pg_identity_pass
+    networks: [idp]
+    restart: "no"
+
+  mailpit:
+    # Dev-only SMTP sink for Kratos verification/recovery emails. UI: http://127.0.0.1:8025
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    networks: [idp]
+
+  kratos-migrate:
+    image: docker.io/oryd/kratos:${ORY_VERSION:-v26.2.0}
+    command: migrate sql up -e --yes
+    environment:
+      DSN: postgres://kratos:${KRATOS_DB_PASSWORD}@postgres:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    networks: [idp]
+    restart: "no"
+
+  kratos:
+    image: oryd/kratos:latest
+    restart: unless-stopped
+    # --dev allows plain-HTTP cookies; remove it outside local development
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    environment:
+      DSN: postgres://kratos:${KRATOS_DB_PASSWORD}@postgres:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+      SECRETS_COOKIE: ${KRATOS_SECRETS_COOKIE}
+      SECRETS_CIPHER: ${KRATOS_SECRETS_CIPHER}
+      COURIER_SMTP_CONNECTION_URI: smtp://mailpit:1025/?disable_starttls=true
+    volumes:
+      - ./kratos:/etc/config/kratos:ro,Z
+    ports:
+      - "4433:4433" # public
+      - "127.0.0.1:4434:4434" # admin
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    networks: [idp]
+
+  hydra-migrate:
+    image: oryd/hydra:latest
+    command: migrate sql up -e --yes
+    environment:
+      DSN: postgres://hydra:${HYDRA_DB_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    networks: [ idp ]
+    restart: "no"
+
+  hydra:
+    image: oryd/hydra:latest
+    # --dev allows an http:// issuer; remove it once you're behind TLS
+    command: serve all -c /etc/config/hydra/hydra.yml --dev
+    environment:
+      DSN: postgres://hydra:${HYDRA_DB_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+      SECRETS_SYSTEM: ${HYDRA_SECRETS_SYSTEM}
+      OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT: ${HYDRA_PAIRWISE_SALT}
+    volumes:
+      - ./hydra:/etc/config/hydra:ro,Z
+    ports:
+      - "4444:4444" # public
+      - "127.0.0.1:4445:4445" # admin
+    depends_on:
+      hydra-migrate:
+        condition: service_completed_successfully
+    networks: [ idp ]
+
+  polis:
+    image: boxyhq/jackson:latest
+    restart: unless-stopped
+    environment:
+      EXTERNAL_URL: http://127.0.0.1:5225 # don't change after creating SSO connections
+      NEXTAUTH_URL: http://127.0.0.1:5225
+      NEXTAUTH_SECRET: ${POLIS_NEXTAUTH_SECRET}
+      NEXTAUTH_ADMIN_CREDENTIALS: ${POLIS_ADMIN_EMAIL}:${POLIS_ADMIN_PASSWORD}
+      API_KEYS: ${POLIS_API_KEY}
+      JACKSON_API_KEYS: ${POLIS_API_KEY} # older name; harmless on newer images
+      DB_ENGINE: sql
+      DB_TYPE: postgres
+      DB_URL: postgres://polis:${POLIS_DB_PASSWORD}@postgres:5432/polis
+      DB_ENCRYPTION_KEY: ${POLIS_DB_ENCRYPTION_KEY}
+      # Lets Polis reach IdPs on private networks (e.g. a test Keycloak/ADFS). Dev only.
+      POLIS_ALLOW_PRIVATE_IP_OUTBOUND: "true"
+    ports:
+      - "5225:5225"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [ idp ]
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:5225/api/health >/dev/null || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  openfga-migrate:
+    image: openfga/openfga:latest
+    command: migrate
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://openfga:${OPENFGA_DB_PASSWORD}@postgres:5432/openfga?sslmode=disable
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    networks: [ idp ]
+    restart: "no"
+
+  openfga:
+    image: openfga/openfga:latest
+    restart: unless-stopped
+    command: run
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://openfga:${OPENFGA_DB_PASSWORD}@postgres:5432/openfga?sslmode=disable
+      OPENFGA_DATASTORE_MAX_OPEN_CONNS: "50"
+      OPENFGA_AUTHN_METHOD: preshared
+      OPENFGA_AUTHN_PRESHARED_KEYS: ${OPENFGA_PRESHARED_KEY}
+      # The playground only works with authn "none", so it's off here
+      OPENFGA_PLAYGROUND_ENABLED: "false"
+      OPENFGA_LOG_FORMAT: json
+    ports:
+      - "8080:8080" # HTTP
+      - "8081:8081" # gRPC
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+    networks: [ idp ]
+    healthcheck:
+      test: [ "CMD", "/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:8081" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+#  talos-migrate:
+#    image: oryd/talos:latest
+#    command: migrate up
+#    environment:
+#      DSN: postgres://talos:${TALOS_DB_PASSWORD}@postgres:5432/talos?sslmode=disable&max_conns=20&max_idle_conns=4
+#    depends_on:
+#      db-init:
+#        condition: service_completed_successfully
+#    networks: [ idp ]
+#    restart: "no"
+#
+#  talos:
+#    image: oryd/talos:latest
+#    restart: unless-stopped
+#    command: serve --config /etc/talos/talos.yml
+#    environment:
+#      DB_DSN: postgres://talos:${TALOS_DB_PASSWORD}@postgres:5432/talos?sslmode=disable&max_conns=20&max_idle_conns=4
+#      SECRETS_HMAC_CURRENT: ${TALOS_HMAC_SECRET}
+#    volumes:
+#      - ./talos/talos.yml:/etc/talos/talos.yml:ro,Z
+#      - talos-data:/var/lib/talos
+#    ports:
+#      - "4420:4420" # API
+#      - "4422:4422" # health (/health/alive, /health/ready)
+#    depends_on:
+#      talos-migrate:
+#        condition: service_completed_successfully
+#    networks: [ idp ]
+#    healthcheck:
+#      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:4422/health/alive" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 3
+volumes:
+  pgdata-identity:
+secrets:
+  pg_identity_pass:
+    external: true

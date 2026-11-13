@@ -1,0 +1,10 @@
+# Ory Talos config. db.dsn and secrets.hmac.current come from environment
+# variables (DB_DSN, SECRETS_HMAC_CURRENT) set in compose.yaml.
+
+credentials:
+  issuer: http://127.0.0.1:4420
+
+serve:
+  http:
+    host: 0.0.0.0
+    port: 4420
