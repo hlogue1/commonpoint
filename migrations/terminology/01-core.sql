@@ -1,12 +1,11 @@
--- Requires PostgreSQL 18 or later (native uuidv7(); UNIQUE NULLS NOT DISTINCT is used by the terms schema).
+CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS plpgsql;
 
-CREATE SCHEMA IF NOT EXISTS terms;
-
-CREATE TABLE terms.license_tier_option (
+CREATE TABLE license_tier_option (
     id CITEXT NOT NULL PRIMARY KEY
 );
 
-INSERT INTO terms.license_tier_option VALUES
+INSERT INTO license_tier_option VALUES
                                           ('open'),
                                           ('umls'),
                                           ('ama_cpt'),
@@ -18,19 +17,19 @@ INSERT INTO terms.license_tier_option VALUES
                                           ('snomed_affiliate'),
                                           ('nanda_elsevier');
 
-CREATE TABLE terms.code_system
+CREATE TABLE code_system
 (
     id                        CITEXT PRIMARY KEY NOT NULL,
-    uri                       text    NOT NULL UNIQUE,
-    name                      text    NOT NULL,
-    publisher                 text,
-    license_tier_id           citext  NOT NULL REFERENCES terms.license_tier_option(id),
+    uri                       TEXT    NOT NULL UNIQUE,
+    name                      TEXT    NOT NULL,
+    publisher                 TEXT,
+    license_tier_id           CITEXT  NOT NULL REFERENCES license_tier_option(id),
     date_of_service_versioned boolean NOT NULL DEFAULT false
 );
 
 -- One row per id pinned by a <system>_release CHECK. uri values starting with
 -- urn:commonpoint:cs: are placeholders for systems with no established FHIR/THO URI.
-INSERT INTO terms.code_system (id, uri, name, publisher, license_tier_id) VALUES
+INSERT INTO code_system (id, uri, name, publisher, license_tier_id) VALUES
     ('snomed',             'http://snomed.info/sct',                                   'SNOMED CT',                                  'SNOMED International',   'snomed_affiliate'),
     ('loinc',              'http://loinc.org',                                         'LOINC',                                      'Regenstrief Institute',  'open'),
     ('rxnorm',             'http://www.nlm.nih.gov/research/umls/rxnorm',              'RxNorm',                                     'NLM',                    'open'),
@@ -76,39 +75,39 @@ INSERT INTO terms.code_system (id, uri, name, publisher, license_tier_id) VALUES
     ('medlineplus',        'urn:commonpoint:cs:medlineplus',                           'MedlinePlus Health Topics',                  'NLM',                    'open'),
     ('umls',               'urn:commonpoint:cs:umls',                                  'UMLS Metathesaurus',                         'NLM',                    'umls');
 
-CREATE TYPE terms.code_system_status AS ENUM ('active', 'superseded', 'retired');
-CREATE TYPE terms.load_status AS ENUM ('loading', 'ready', 'failed');
+CREATE TYPE code_system_status AS ENUM ('active', 'superseded', 'retired');
+CREATE TYPE load_status AS ENUM ('loading', 'ready', 'failed');
 
-CREATE TABLE terms.code_system_version
+CREATE TABLE code_system_version
 (
     id               UUID                 DEFAULT uuidv7() PRIMARY KEY NOT NULL,
-    code_system_id   CITEXT    NOT NULL REFERENCES terms.code_system (id),
-    version          text        NOT NULL,
-    fhir_version_uri text,
+    code_system_id   CITEXT    NOT NULL REFERENCES code_system (id),
+    version          TEXT        NOT NULL,
+    fhir_version_uri TEXT,
     release_date     date,
     validity         daterange  NOT NULL,
-    status           terms.code_system_status NOT NULL DEFAULT 'active',
-    load_status      terms.load_status NOT NULL DEFAULT 'loading',
+    status           code_system_status NOT NULL DEFAULT 'active',
+    load_status      load_status NOT NULL DEFAULT 'loading',
     loaded_at        timestamptz,
     UNIQUE (code_system_id, version),
     UNIQUE (id, code_system_id),
     CHECK (NOT isempty(validity)),
-    EXCLUDE USING gist (lower(code_system_id::text) WITH =, validity WITH &&) WHERE (status <> 'retired')
+    EXCLUDE USING gist (lower(code_system_id::TEXT) WITH =, validity WITH &&) WHERE (status <> 'retired')
 );
 
 CREATE UNIQUE INDEX code_system_version_one_active
-    ON terms.code_system_version (code_system_id) WHERE status = 'active';
+    ON code_system_version (code_system_id) WHERE status = 'active';
 
 -- code_system_version_one_active cannot be deferred, so the old active version
 -- has to be superseded before the new one is activated.
-CREATE FUNCTION terms.activate_version(p_version_id uuid)
+CREATE FUNCTION activate_version(p_version_id uuid)
     RETURNS void
     LANGUAGE plpgsql AS $$
 DECLARE
-    v_code_system_id citext;
+    v_code_system_id CITEXT;
 BEGIN
     SELECT code_system_id INTO v_code_system_id
-    FROM terms.code_system_version
+    FROM code_system_version
     WHERE id = p_version_id
     FOR UPDATE;
 
@@ -116,36 +115,36 @@ BEGIN
         RAISE EXCEPTION 'code_system_version % does not exist', p_version_id;
     END IF;
 
-    UPDATE terms.code_system_version
+    UPDATE code_system_version
     SET status = 'superseded'
     WHERE code_system_id = v_code_system_id
       AND status = 'active'
       AND id <> p_version_id;
 
-    UPDATE terms.code_system_version
+    UPDATE code_system_version
     SET status = 'active'
     WHERE id = p_version_id;
 END
 $$;
 
-CREATE TABLE terms.code_system_enablement
+CREATE TABLE code_system_enablement
 (
-    code_system_id    CITEXT PRIMARY KEY REFERENCES terms.code_system (id),
+    code_system_id    CITEXT PRIMARY KEY REFERENCES code_system (id),
     enabled           boolean NOT NULL DEFAULT false,
-    license_reference text
+    license_reference TEXT
 );
 
-CREATE VIEW terms.active_version AS
+CREATE VIEW active_version AS
 SELECT cs.id AS code_system_id, cs.uri, cs.name, v.id AS version_id, v.version, v.fhir_version_uri
-FROM terms.code_system cs
-         JOIN terms.code_system_version v ON v.code_system_id = cs.id AND v.status = 'active' AND v.load_status = 'ready';
+FROM code_system cs
+         JOIN code_system_version v ON v.code_system_id = cs.id AND v.status = 'active' AND v.load_status = 'ready';
 
-CREATE FUNCTION terms.version_for_date(p_uri text, p_date date)
+CREATE FUNCTION version_for_date(p_uri TEXT, p_date date)
     RETURNS UUID
     LANGUAGE sql STABLE AS $$
 SELECT v.id
-FROM terms.code_system cs
-         JOIN terms.code_system_version v ON v.code_system_id = cs.id
+FROM code_system cs
+         JOIN code_system_version v ON v.code_system_id = cs.id
 WHERE cs.uri = p_uri
   AND v.status IN ('active', 'superseded')
   AND v.validity @> p_date
@@ -154,13 +153,13 @@ ORDER BY (v.status = 'active') DESC, lower(v.validity) DESC
 LIMIT 1
 $$;
 
--- Lookup by code system id. An untyped literal resolves to the (text, date) URI overload
--- above and returns NULL, so callers passing an id must cast it: 'loinc'::citext.
-CREATE FUNCTION terms.version_for_date(p_code_system_id citext, p_date date)
+-- Lookup by code system id. An untyped literal resolves to the (TEXT, date) URI overload
+-- above and returns NULL, so callers passing an id must cast it: 'loinc'::CITEXT.
+CREATE FUNCTION version_for_date(p_code_system_id CITEXT, p_date date)
     RETURNS UUID
     LANGUAGE sql STABLE AS $$
 SELECT v.id
-FROM terms.code_system_version v
+FROM code_system_version v
 WHERE v.code_system_id = p_code_system_id
   AND v.status IN ('active', 'superseded')
   AND v.validity @> p_date
