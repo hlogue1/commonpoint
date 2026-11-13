@@ -1,5 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS plpgsql;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE license_tier_option (
     id CITEXT NOT NULL PRIMARY KEY
@@ -75,7 +77,7 @@ INSERT INTO code_system (id, uri, name, publisher, license_tier_id) VALUES
     ('medlineplus',        'urn:commonpoint:cs:medlineplus',                           'MedlinePlus Health Topics',                  'NLM',                    'open'),
     ('umls',               'urn:commonpoint:cs:umls',                                  'UMLS Metathesaurus',                         'NLM',                    'umls');
 
-CREATE TYPE code_system_status AS ENUM ('active', 'superseded', 'retired');
+CREATE TYPE code_system_status AS ENUM ('active', 'staged', 'superseded', 'retired');
 CREATE TYPE load_status AS ENUM ('loading', 'ready', 'failed');
 
 CREATE TABLE code_system_version
@@ -86,7 +88,7 @@ CREATE TABLE code_system_version
     fhir_version_uri TEXT,
     release_date     date,
     validity         daterange  NOT NULL,
-    status           code_system_status NOT NULL DEFAULT 'active',
+    status           code_system_status NOT NULL DEFAULT 'staged',
     load_status      load_status NOT NULL DEFAULT 'loading',
     loaded_at        timestamptz,
     UNIQUE (code_system_id, version),
