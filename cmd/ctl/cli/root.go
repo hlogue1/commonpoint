@@ -3,6 +3,9 @@ package cli
 import (
 	"os"
 
+	"github.com/hlogue1/commonpoint/cmd/ctl/cli/build"
+	"github.com/hlogue1/commonpoint/cmd/ctl/cli/envman"
+	"github.com/hlogue1/commonpoint/cmd/ctl/cli/terms"
 	"github.com/spf13/cobra"
 )
 
@@ -31,13 +34,7 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ctl.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.AddCommand(build.NewCommand())
+	rootCmd.AddCommand(envman.NewCommand())
+	rootCmd.AddCommand(terms.NewCommand())
 }
