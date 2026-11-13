@@ -1,0 +1,63 @@
+services:
+  clinical-db:
+    image: registry.access.redhat.com/hi/postgresql:latest
+    container_name: commonpoint-db-clinical
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata-clinical:/var/lib/postgresql/data:z
+    secrets:
+      - pg_clinical_pass
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_clinical_pass
+  terms-db:
+    image: registry.access.redhat.com/hi/postgresql:latest
+    container_name: commonpoint-db-terms
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-terms:/var/lib/postgresql/data:z
+    secrets:
+      - pg_terminology_pass
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_terminology_pass
+  identity-db:
+    image: registry.access.redhat.com/hi/postgresql:latest
+    container_name: commonpoint-db-identity
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-terms:/var/lib/postgresql/data:z
+    secrets:
+      - pg_identity_pass
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_identity_pass
+  build-db:
+    image: dolthub/doltgresql:latest
+    container_name: commonpoint-db-build
+    restart: unless-stopped
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata-build:/var/lib/doltgresql:z
+    secrets:
+      - dolt_pg_build_pass
+    environment:
+      DOLTGRES_PASSWORD_FILE: /run/secrets/dolt_pg_build_pass
+volumes:
+  pgdata-clinical:
+  pgdata-terms:
+  pgdata-identity:
+  pgdata-build:
+secrets:
+  pg_clinical_pass:
+    external: true
+  pg_terminology_pass:
+    external: true
+  pg_identity_pass:
+    external: true
+  dolt_pg_build_pass:
+    external: true
