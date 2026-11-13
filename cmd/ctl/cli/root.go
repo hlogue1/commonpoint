@@ -9,23 +9,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	verbose bool
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ctl",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cli *cobra.Command, args []string) { },
+	Short: "CommonPoint EHR Control Interface",
+	Args:  cobra.ExactArgs(1),
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -34,6 +28,7 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	rootCmd.AddCommand(build.NewCommand())
 	rootCmd.AddCommand(envman.NewCommand())
 	rootCmd.AddCommand(terms.NewCommand())
