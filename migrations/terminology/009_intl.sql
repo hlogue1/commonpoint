@@ -104,3 +104,18 @@ CREATE TABLE icf_qualifier_level (
     label TEXT NOT NULL,
     PRIMARY KEY (version_id, component, position, value)
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE icf_qualifier_level;
+DROP TYPE icf_qualifier_component;
+DROP TABLE icf_code;
+DROP TABLE icf_release;
+DROP TABLE icpc2_icd10_term;
+DROP TABLE icpc2_icd10_release;
+DROP TABLE icpc2plus_term;
+DROP TABLE icpc2plus_release;
+DROP TABLE icpc2_code;
+DROP TABLE icpc2_release;

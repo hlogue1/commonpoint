@@ -239,3 +239,19 @@ SELECT version_for_date(cs.id, p_date)
 FROM code_system cs
 WHERE cs.uri = p_uri
 $$;
+
+
+---- create above / drop below ----
+
+
+DROP FUNCTION version_for_date(text, date);
+DROP FUNCTION version_for_date(citext, date);
+DROP VIEW active_version;
+DROP TABLE code_system_enablement;
+DROP FUNCTION activate_version(uuid);
+DROP TABLE code_system_version;
+DROP FUNCTION code_system_version_check_validity();
+DROP TYPE load_status;
+DROP TYPE code_system_status;
+DROP TABLE code_system;
+DROP TABLE license_tier_option;

@@ -208,3 +208,30 @@ CREATE TABLE pdq_synonym (
     PRIMARY KEY (version_id, cdr_id, synonym),
     FOREIGN KEY (version_id, cdr_id) REFERENCES pdq_term (version_id, cdr_id) ON DELETE CASCADE
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE pdq_synonym;
+DROP TABLE pdq_term;
+DROP TABLE pdq_release;
+DROP TABLE ncit_subset_member;
+DROP TABLE ncit_synonym;
+DROP TABLE ncit_closure;
+DROP TABLE ncit_parent;
+DROP TABLE ncit_concept;
+DROP TABLE ncit_release;
+DROP TABLE orphanet_xref;
+DROP TYPE orphanet_xref_relation;
+DROP TABLE orphanet_parent;
+DROP TABLE orphanet_disorder;
+DROP TABLE orphanet_release;
+DROP TABLE mondo_xref;
+DROP TYPE mondo_xref_relation;
+DROP TABLE mondo_synonym;
+DROP TYPE mondo_synonym_scope;
+DROP TABLE mondo_parent;
+DROP TABLE mondo_alt_id;
+DROP TABLE mondo_term;
+DROP TABLE mondo_release;

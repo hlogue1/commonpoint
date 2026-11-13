@@ -98,3 +98,20 @@ CREATE TABLE loinc_panel_member (
 ) PARTITION BY LIST (version_id);
 
 CREATE INDEX loinc_panel_member_member ON loinc_panel_member (version_id, member_loinc_num);
+
+
+---- create above / drop below ----
+
+
+DROP TABLE loinc_panel_member;
+DROP TYPE loinc_observation_required;
+DROP TABLE loinc_term_answer_list;
+DROP TYPE loinc_term_answer_list_binding;
+DROP TABLE loinc_answer;
+DROP TABLE loinc_answer_list;
+DROP TABLE loinc_map_to;
+DROP TABLE loinc_term;
+DROP TYPE loinc_order_obs;
+DROP TYPE loinc_status;
+DROP TYPE loinc_class_type;
+DROP TABLE loinc_release;

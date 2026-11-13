@@ -58,3 +58,13 @@ CREATE TABLE meddra_hierarchy (
 );
 
 CREATE UNIQUE INDEX meddra_hierarchy_one_primary ON meddra_hierarchy (version_id, pt_code) WHERE primary_soc;
+
+
+---- create above / drop below ----
+
+
+DROP TABLE meddra_hierarchy;
+DROP TABLE meddra_llt;
+DROP TABLE meddra_term;
+DROP TYPE meddra_term_level;
+DROP TABLE meddra_release;

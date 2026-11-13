@@ -92,3 +92,11 @@ SELECT EXISTS (
       AND ci.active
       AND ci.version_id = version_for_date(p_code_system::citext, p_date))
 $$;
+
+
+---- create above / drop below ----
+
+
+DROP FUNCTION validate_code(text, text, date);
+DROP FUNCTION lookup(text, text);
+DROP VIEW concept_index;

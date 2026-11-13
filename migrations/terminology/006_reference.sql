@@ -98,3 +98,21 @@ CREATE TABLE ucum_common_unit (
     property TEXT,
     PRIMARY KEY (version_id, code)
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE ucum_common_unit;
+DROP TABLE ucum_release;
+DROP TABLE cdc_race_ethnicity_code;
+DROP TYPE cdc_race_ethnicity_type;
+DROP TABLE cdc_race_ethnicity_release;
+DROP TABLE nucc_taxonomy;
+DROP TABLE nucc_release;
+DROP TABLE cvx_product;
+DROP TABLE mvx_manufacturer;
+DROP TABLE mvx_release;
+DROP TABLE cvx_vaccine;
+DROP TYPE cvx_status;
+DROP TABLE cvx_release;

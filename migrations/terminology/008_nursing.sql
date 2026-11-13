@@ -187,3 +187,28 @@ CREATE TABLE pnds_outcome_intervention (
         REFERENCES pnds_concept (version_id, code)
         ON DELETE CASCADE
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE pnds_outcome_intervention;
+DROP TABLE pnds_concept;
+DROP TYPE pnds_concept_type;
+DROP TABLE pnds_release;
+DROP TABLE omaha_concept;
+DROP TYPE omaha_concept_type;
+DROP TABLE omaha_release;
+DROP TABLE noc_indicator;
+DROP TABLE noc_outcome;
+DROP TABLE noc_scale_level;
+DROP TABLE noc_scale;
+DROP TABLE noc_release;
+DROP TABLE nic_activity;
+DROP TABLE nic_intervention;
+DROP TABLE nic_release;
+DROP TABLE nanda_diagnosis_indicator;
+DROP TABLE nanda_diagnosis;
+DROP TYPE nanda_dx_indicator_type;
+DROP TYPE nanda_dx_type;
+DROP TABLE nanda_release;

@@ -116,3 +116,23 @@ CREATE TABLE ccs_ml_icd9_assignment (
         REFERENCES ccs_ml_category (version_id, kind, code)
         ON DELETE CASCADE
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE ccs_ml_icd9_assignment;
+DROP TABLE ccs_ml_category;
+DROP TABLE ccs_ml_release;
+DROP TABLE ccs_icd9_assignment;
+DROP TABLE ccs_category;
+DROP TYPE ccs_type;
+DROP TABLE ccs_release;
+DROP TABLE ccsr_proc_assignment;
+DROP TABLE ccsr_proc_category;
+DROP TABLE ccsr_proc_release;
+DROP TABLE ccsr_dx_default;
+DROP TYPE ccsr_setting;
+DROP TABLE ccsr_dx_assignment;
+DROP TABLE ccsr_dx_category;
+DROP TABLE ccsr_dx_release;

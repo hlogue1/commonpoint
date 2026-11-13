@@ -141,3 +141,23 @@ CREATE TABLE hpo_xref (
 ) PARTITION BY LIST (version_id);
 
 CREATE INDEX hpo_xref_reverse ON hpo_xref (version_id, target_system, target_code);
+
+
+---- create above / drop below ----
+
+
+DROP TABLE hpo_xref;
+DROP TABLE hpo_synonym;
+DROP TYPE hpo_synonym_scope;
+DROP TABLE hpo_closure;
+DROP TABLE hpo_parent;
+DROP TABLE hpo_consider;
+DROP TABLE hpo_alt_id;
+DROP TABLE hpo_term;
+DROP TABLE hpo_release;
+DROP TABLE hgnc_withdrawn;
+DROP TABLE hgnc_symbol_alias;
+DROP TYPE hgnc_alias_type;
+DROP TABLE hgnc_gene;
+DROP TYPE hgnc_gene_status;
+DROP TABLE hgnc_release;

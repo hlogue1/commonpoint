@@ -225,3 +225,37 @@ CREATE TABLE ncci_add_on (
     edit_type smallint NOT NULL,
     PRIMARY KEY (version_id, add_on_code, primary_code)
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE ncci_add_on;
+DROP TABLE ncci_release;
+DROP TABLE sop_code;
+DROP TABLE sop_release;
+DROP TABLE abc_code;
+DROP TABLE abc_release;
+DROP TABLE icd9_gem;
+DROP TYPE icd9_map_type;
+DROP TABLE icd9_code;
+DROP TYPE icd9_type;
+DROP TABLE icd9_release;
+DROP TABLE cdt_code;
+DROP TABLE cdt_release;
+DROP TABLE hcpcs_modifier;
+DROP TABLE hcpcs_code;
+DROP TABLE hcpcs_release;
+DROP TABLE cpt_modifier;
+DROP TABLE cpt_clinician_descriptor;
+DROP TABLE cpt_code;
+DROP TYPE cpt_code_type;
+DROP TABLE cpt_release;
+DROP TABLE icd_pcs_code;
+DROP TABLE icd_pcs_release;
+DROP TABLE icd10_seven_chr;
+DROP TABLE icd10_note;
+DROP TYPE icd10_note_scope;
+DROP TYPE icd10_note_type;
+DROP TABLE icd10_code;
+DROP TABLE icd10_release;

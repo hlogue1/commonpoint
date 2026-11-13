@@ -249,3 +249,33 @@ CREATE TABLE uspmg_rxnorm_link (
 );
 
 CREATE INDEX uspmg_rxnorm_link_by_rxcui ON uspmg_rxnorm_link (version_id, rxcui);
+
+
+---- create above / drop below ----
+
+
+DROP TABLE uspmg_rxnorm_link;
+DROP TABLE uspmg_class;
+DROP TYPE uspmg_level;
+DROP TABLE uspmg_release;
+DROP TABLE cms_frf_drug;
+DROP TABLE cms_frf_release;
+DROP TABLE atc_rxnorm_link;
+DROP TABLE atc_ddd;
+DROP TABLE atc_code;
+DROP TABLE atc_release;
+DROP TABLE medrt_rxnorm_link;
+DROP TYPE medrt_rxn_link_rel;
+DROP TABLE medrt_concept_parent;
+DROP TABLE medrt_concept;
+DROP TYPE medrt_concept_kind;
+DROP TABLE medrt_release;
+DROP TABLE rxnorm_history;
+DROP TABLE rxnorm_ndc;
+DROP TABLE rxnorm_drug_ingredient;
+DROP TABLE rxnorm_pack_member;
+DROP TABLE rxnorm_drug;
+DROP TABLE rxnorm_concept_name;
+DROP TABLE rxnorm_concept;
+DROP TABLE rxnorm_tty;
+DROP TABLE rxnorm_release;

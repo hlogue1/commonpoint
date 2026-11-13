@@ -188,3 +188,22 @@ SELECT p_ancestor = p_descendant OR EXISTS (
     SELECT 1 FROM snomed_closure
     WHERE version_id = p_version_id AND ancestor_id = p_ancestor AND descendant_id = p_descendant)
 $$;
+
+
+---- create above / drop below ----
+
+
+DROP FUNCTION snomed_subsumes(uuid, bigint, bigint);
+DROP TABLE snomed_core_problem_list;
+DROP TABLE snomed_extended_map;
+DROP TABLE snomed_history;
+DROP TABLE snomed_closure;
+DROP TABLE snomed_refset_member;
+DROP TABLE snomed_relationship_concrete;
+DROP TABLE snomed_relationship;
+DROP TABLE snomed_language_member;
+DROP TABLE snomed_description;
+DROP TYPE snomed_acceptability_level;
+DROP TYPE snomed_description_type;
+DROP TABLE snomed_concept;
+DROP TABLE snomed_release;

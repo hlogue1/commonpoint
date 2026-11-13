@@ -22,3 +22,11 @@ CREATE TABLE umdns_entry_term (
     PRIMARY KEY (version_id, code, term),
     FOREIGN KEY (version_id, code) REFERENCES umdns_category (version_id, code) ON DELETE CASCADE
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE umdns_entry_term;
+DROP TABLE umdns_category;
+DROP TABLE umdns_release;

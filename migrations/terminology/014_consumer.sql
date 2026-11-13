@@ -63,3 +63,15 @@ CREATE TABLE medlineplus_related_topic (
     FOREIGN KEY (version_id, topic_id)         REFERENCES medlineplus_topic (version_id, topic_id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     FOREIGN KEY (version_id, related_topic_id) REFERENCES medlineplus_topic (version_id, topic_id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
 );
+
+
+---- create above / drop below ----
+
+
+DROP TABLE medlineplus_related_topic;
+DROP TABLE medlineplus_topic_group;
+DROP TABLE medlineplus_topic_alias;
+DROP TABLE medlineplus_topic;
+DROP TABLE medlineplus_release;
+DROP TABLE chv_term;
+DROP TABLE chv_release;
