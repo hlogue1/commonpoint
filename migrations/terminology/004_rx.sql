@@ -50,6 +50,23 @@ CREATE TABLE rxnorm_concept (
 CREATE INDEX rxn_concept_tty       ON rxnorm_concept (version_id, tty);
 CREATE INDEX rxn_concept_name_trgm ON rxnorm_concept USING gin (name gin_trgm_ops);
 
+-- Every SAB=RXNORM atom from RXNCONSO, one row per RXAUI: the concept's own name plus the
+-- PSN, SY, TMSY and ET atoms that rxnorm_concept.name cannot hold. rxnorm_concept.name stays
+-- the primary display. Prescribable name: tty = 'PSN'; Tall Man form: tty = 'TMSY'.
+CREATE TABLE rxnorm_concept_name (
+    version_id UUID NOT NULL REFERENCES rxnorm_release(version_id) ON DELETE CASCADE,
+    rxaui TEXT NOT NULL CHECK (rxaui ~ '^[0-9]+$'),
+    rxcui TEXT NOT NULL,
+    tty TEXT NOT NULL REFERENCES rxnorm_tty (tty),
+    name TEXT NOT NULL,
+    suppress CHAR(1) NOT NULL DEFAULT 'N' CHECK (suppress IN ('N', 'O', 'Y', 'E')),
+    PRIMARY KEY (version_id, rxaui),
+    FOREIGN KEY (version_id, rxcui) REFERENCES rxnorm_concept(version_id, rxcui) ON DELETE CASCADE
+) PARTITION BY LIST (version_id);
+
+CREATE INDEX rxn_concept_name_by_rxcui ON rxnorm_concept_name (version_id, rxcui, tty);
+CREATE INDEX rxn_concept_name_trgm     ON rxnorm_concept_name USING gin (name gin_trgm_ops);
+
 CREATE TABLE rxnorm_drug (
     version_id UUID NOT NULL REFERENCES rxnorm_release(version_id) ON DELETE CASCADE,
     rxcui TEXT NOT NULL,
@@ -61,7 +78,7 @@ CREATE TABLE rxnorm_drug (
     FOREIGN KEY (version_id, dose_form_rxcui) REFERENCES rxnorm_concept(version_id, rxcui),
     FOREIGN KEY (version_id, brand_name_rxcui) REFERENCES rxnorm_concept(version_id, rxcui),
     FOREIGN KEY (version_id, generic_rxcui) REFERENCES rxnorm_concept(version_id, rxcui)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX rxn_drug_generic ON rxnorm_drug (version_id, generic_rxcui);
 
@@ -72,7 +89,7 @@ CREATE TABLE rxnorm_pack_member (
     PRIMARY KEY (version_id, pack_rxcui, component_rxcui),
     FOREIGN KEY (version_id, pack_rxcui) REFERENCES rxnorm_concept(version_id, rxcui) ON DELETE CASCADE,
     FOREIGN KEY (version_id, component_rxcui) REFERENCES rxnorm_concept(version_id, rxcui) ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 -- Holds SCD/SBD ingredients only. Pack contents are in rxnorm_pack_member.
 CREATE TABLE rxnorm_drug_ingredient (
@@ -110,7 +127,7 @@ CREATE TABLE rxnorm_history (
     retired_rxcui TEXT NOT NULL,
     new_rxcui TEXT,
     UNIQUE NULLS NOT DISTINCT (version_id, retired_rxcui, new_rxcui)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE medrt_release (
     version_id   UUID PRIMARY KEY,

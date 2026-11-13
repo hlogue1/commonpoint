@@ -14,7 +14,10 @@ CREATE VIEW concept_index AS
              UNION ALL SELECT 'icd10cm',  version_id, code, long_desc, true FROM icd10_code
              UNION ALL SELECT 'icd10pcs', version_id, code, long_desc, true FROM icd_pcs_code
              UNION ALL SELECT 'cpt',      version_id, code, long_descriptor, true FROM cpt_code
-             UNION ALL SELECT 'hcpcs',    version_id, code, long_desc, COALESCE(upper(validity) > current_date, true) FROM hcpcs_code
+             -- Active is judged against the release's own start, not the clock, so a release always gives the same answer.
+             UNION ALL SELECT 'hcpcs',    hc.version_id, hc.code, hc.long_desc,
+                              COALESCE(upper_inf(hc.validity) OR upper(hc.validity) > COALESCE(lower(rv.validity), rv.release_date), true)
+                       FROM hcpcs_code hc JOIN code_system_version rv ON rv.id = hc.version_id
              UNION ALL SELECT 'cdt',      version_id, code, nomenclature, true FROM cdt_code
              UNION ALL SELECT 'icd9cm',   version_id, code, long_desc, true FROM icd9_code
              UNION ALL SELECT 'abc',      version_id, code, descriptor, true FROM abc_code
@@ -29,6 +32,7 @@ CREATE VIEW concept_index AS
              UNION ALL SELECT 'ccsr_dx',  version_id, code, description, true FROM ccsr_dx_category
              UNION ALL SELECT 'ccsr_pr',  version_id, code, description, true FROM ccsr_proc_category
              UNION ALL SELECT 'ccs',      version_id, kind || ':' || code, label, true FROM ccs_category
+             UNION ALL SELECT 'ccs_ml',   version_id, kind || ':' || code, label, true FROM ccs_ml_category
              -- nursing
              UNION ALL SELECT 'nanda',    version_id, code, label, true FROM nanda_diagnosis
              UNION ALL SELECT 'nic',      version_id, code, label, true FROM nic_intervention

@@ -15,7 +15,7 @@ CREATE TABLE mondo_term (
     replaced_by TEXT,
     PRIMARY KEY (version_id, id),
     CHECK (obsolete OR replaced_by IS NULL)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX mondo_term_name_trgm ON mondo_term USING gin (name gin_trgm_ops);
 
@@ -27,7 +27,7 @@ CREATE TABLE mondo_alt_id (
     FOREIGN KEY (version_id, id)
         REFERENCES mondo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE mondo_parent (
     version_id UUID NOT NULL REFERENCES mondo_release(version_id) ON DELETE CASCADE,
@@ -40,7 +40,7 @@ CREATE TABLE mondo_parent (
     FOREIGN KEY (version_id, parent_id)
         REFERENCES mondo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TYPE mondo_synonym_scope AS ENUM ('exact', 'broad', 'narrow', 'related');
 
@@ -53,7 +53,7 @@ CREATE TABLE mondo_synonym (
     FOREIGN KEY (version_id, id)
         REFERENCES mondo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TYPE mondo_xref_relation AS ENUM ('exact', 'close', 'broad', 'narrow', 'xref');
 
@@ -67,7 +67,7 @@ CREATE TABLE mondo_xref (
     FOREIGN KEY (version_id, id)
         REFERENCES mondo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX mondo_xref_reverse ON mondo_xref (version_id, target_system, target_code);
 
@@ -145,7 +145,7 @@ CREATE TABLE ncit_parent (
     PRIMARY KEY (version_id, code, parent_code),
     FOREIGN KEY (version_id, code)        REFERENCES ncit_concept (version_id, code) ON DELETE CASCADE,
     FOREIGN KEY (version_id, parent_code) REFERENCES ncit_concept (version_id, code) ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE ncit_closure (
     version_id    uuid NOT NULL REFERENCES ncit_release (version_id) ON DELETE CASCADE,
@@ -153,7 +153,7 @@ CREATE TABLE ncit_closure (
     descendant_id text NOT NULL,
     depth         smallint NOT NULL,
     PRIMARY KEY (version_id, ancestor_id, descendant_id)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX ncit_closure_up ON ncit_closure (version_id, descendant_id);
 
@@ -181,7 +181,7 @@ CREATE TABLE ncit_subset_member (
     FOREIGN KEY (version_id, code)
         REFERENCES ncit_concept (version_id, code)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 
 CREATE TABLE pdq_release (

@@ -38,7 +38,7 @@ CREATE TABLE loinc_map_to (
     map_to TEXT NOT NULL,
     comment TEXT,
     PRIMARY KEY (version_id, loinc_num, map_to)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE loinc_answer_list (
     version_id UUID NOT NULL REFERENCES loinc_release(version_id) ON DELETE CASCADE,
@@ -48,7 +48,7 @@ CREATE TABLE loinc_answer_list (
     ext_defined BOOLEAN NOT NULL DEFAULT FALSE,
     ext_defined_url TEXT,
     PRIMARY KEY (version_id, answer_list_id)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE loinc_answer (
     version_id UUID NOT NULL REFERENCES loinc_release(version_id) ON DELETE CASCADE,
@@ -65,7 +65,7 @@ CREATE TABLE loinc_answer (
     ext_code_system_version TEXT,
     PRIMARY KEY (version_id, answer_list_id, sequence),
     FOREIGN KEY (version_id, answer_list_id) REFERENCES loinc_answer_list(version_id, answer_list_id) ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TYPE loinc_term_answer_list_binding AS ENUM ('normative', 'preferred', 'example');
 
@@ -78,7 +78,7 @@ CREATE TABLE loinc_term_answer_list (
     PRIMARY KEY (version_id, loinc_num, answer_list_id, applicable_context),
     FOREIGN KEY (version_id, loinc_num) REFERENCES loinc_term(version_id, loinc_num) ON DELETE CASCADE,
     FOREIGN KEY (version_id, answer_list_id) REFERENCES loinc_answer_list(version_id, answer_list_id) ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TYPE loinc_observation_required AS ENUM ('required', 'optional', 'conditional');
 
@@ -95,6 +95,6 @@ CREATE TABLE loinc_panel_member (
     PRIMARY KEY (version_id, panel_loinc_num, sequence),
     FOREIGN KEY (version_id, panel_loinc_num) REFERENCES loinc_term(version_id, loinc_num) ON DELETE CASCADE,
     FOREIGN KEY (version_id, member_loinc_num) REFERENCES loinc_term(version_id, loinc_num) ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX loinc_panel_member_member ON loinc_panel_member (version_id, member_loinc_num);

@@ -65,29 +65,54 @@ CREATE TABLE ccs_release (
 );
 
 CREATE TYPE ccs_type AS ENUM ('dx', 'pr');
-CREATE TYPE ccs_scheme AS ENUM ('single', 'multi');
 
+-- Single-level CCS: flat numeric categories.
 CREATE TABLE ccs_category (
     version_id UUID NOT NULL REFERENCES ccs_release(version_id) ON DELETE CASCADE,
     kind ccs_type NOT NULL,
-    code TEXT NOT NULL,
-    scheme ccs_scheme NOT NULL,
+    code TEXT NOT NULL CHECK ( code ~ '^[0-9]+$' ),
     label TEXT NOT NULL,
-    parent_code TEXT,
-    PRIMARY KEY (version_id, kind, scheme, code),
-    FOREIGN KEY (version_id, kind, scheme, parent_code)
-        REFERENCES ccs_category (version_id, kind, scheme, code)
-        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    PRIMARY KEY (version_id, kind, code)
 );
 
 CREATE TABLE ccs_icd9_assignment (
     version_id UUID NOT NULL REFERENCES ccs_release(version_id) ON DELETE CASCADE,
     kind ccs_type NOT NULL,
-    scheme ccs_scheme NOT NULL,
     icd_code TEXT NOT NULL,
     category_code TEXT NOT NULL,
-    PRIMARY KEY (version_id, kind, scheme, icd_code, category_code),
-    FOREIGN KEY (version_id, kind, scheme, category_code)
-        REFERENCES ccs_category (version_id, kind, scheme, code)
+    PRIMARY KEY (version_id, kind, icd_code, category_code),
+    FOREIGN KEY (version_id, kind, category_code)
+        REFERENCES ccs_category (version_id, kind, code)
+        ON DELETE CASCADE
+);
+
+-- Multi-level CCS is its own code system: its top-level codes ('1', '2', ...) reuse the
+-- single-level numbers with different meanings.
+CREATE TABLE ccs_ml_release (
+    version_id   UUID PRIMARY KEY,
+    code_system  CITEXT NOT NULL DEFAULT 'ccs_ml' CHECK (code_system = 'ccs_ml'),
+    FOREIGN KEY (version_id, code_system) REFERENCES code_system_version(id, code_system_id) ON DELETE CASCADE
+);
+
+CREATE TABLE ccs_ml_category (
+    version_id UUID NOT NULL REFERENCES ccs_ml_release(version_id) ON DELETE CASCADE,
+    kind ccs_type NOT NULL,
+    code TEXT NOT NULL CHECK ( code ~ '^[0-9]+(\.[0-9]+)*$' ),
+    label TEXT NOT NULL,
+    parent_code TEXT,
+    PRIMARY KEY (version_id, kind, code),
+    FOREIGN KEY (version_id, kind, parent_code)
+        REFERENCES ccs_ml_category (version_id, kind, code)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE ccs_ml_icd9_assignment (
+    version_id UUID NOT NULL REFERENCES ccs_ml_release(version_id) ON DELETE CASCADE,
+    kind ccs_type NOT NULL,
+    icd_code TEXT NOT NULL,
+    category_code TEXT NOT NULL,
+    PRIMARY KEY (version_id, kind, icd_code, category_code),
+    FOREIGN KEY (version_id, kind, category_code)
+        REFERENCES ccs_ml_category (version_id, kind, code)
         ON DELETE CASCADE
 );

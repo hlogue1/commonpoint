@@ -66,7 +66,7 @@ CREATE TABLE hpo_term (
     replaced_by TEXT,
     PRIMARY KEY (version_id, id),
     CHECK (obsolete OR replaced_by IS NULL)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX hpo_term_name_trgm ON hpo_term USING gin (name gin_trgm_ops);
 
@@ -78,14 +78,14 @@ CREATE TABLE hpo_alt_id (
     FOREIGN KEY (version_id, id)
         REFERENCES hpo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE hpo_consider (
     version_id UUID NOT NULL REFERENCES hpo_release(version_id) ON DELETE CASCADE,
     obsolete_id TEXT NOT NULL,
     consider_id TEXT NOT NULL,
     PRIMARY KEY (version_id, obsolete_id, consider_id)
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE hpo_parent (
     version_id UUID NOT NULL REFERENCES hpo_release(version_id) ON DELETE CASCADE,
@@ -98,7 +98,7 @@ CREATE TABLE hpo_parent (
     FOREIGN KEY (version_id, parent_id)
         REFERENCES hpo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE hpo_closure (
     version_id UUID NOT NULL REFERENCES hpo_release(version_id) ON DELETE CASCADE,
@@ -112,7 +112,7 @@ CREATE TABLE hpo_closure (
     FOREIGN KEY (version_id, descendant_id)
         REFERENCES hpo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX hpo_closure_up ON hpo_closure (version_id, descendant_id);
 
@@ -127,7 +127,7 @@ CREATE TABLE hpo_synonym (
     FOREIGN KEY (version_id, id)
         REFERENCES hpo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE TABLE hpo_xref (
     version_id UUID NOT NULL REFERENCES hpo_release(version_id) ON DELETE CASCADE,
@@ -138,6 +138,6 @@ CREATE TABLE hpo_xref (
     FOREIGN KEY (version_id, id)
         REFERENCES hpo_term (version_id, id)
         ON DELETE CASCADE
-);
+) PARTITION BY LIST (version_id);
 
 CREATE INDEX hpo_xref_reverse ON hpo_xref (version_id, target_system, target_code);
