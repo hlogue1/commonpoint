@@ -129,7 +129,7 @@ CREATE TABLE rxnorm_term (version_id uuid, rxcui text, tty text REFERENCES rxnor
                           PRIMARY KEY (version_id, rxcui, tty, name)) PARTITION BY LIST (version_id);
 ```
 
-### C8 — CPT `category` enum
+### C8 — CPT `category` enum ✅ resolved (026: `MAAA` value + category/code-shape CHECK)
 The regex accepts the `M` suffix (Administrative MAAA codes), but `cpt_code_type` has no value for them. Add `'MAAA'`, or map M codes explicitly in the loader.
 
 ### C9 — HCPCS D-codes vs CDT
