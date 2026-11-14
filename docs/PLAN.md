@@ -38,7 +38,7 @@ findings below, and says what to do first.
 ## 2. Findings (verified by running)
 
 I applied every terminology migration to a scratch PostgreSQL 16 with a `uuidv7()` shim and ran behavior
-tests. The scripts and output are in `docs/plan-evidence/`. ✅ = reproduced, 👁 = from reading.
+tests.
 
 | ID | Finding | Fix |
 |---|---|---|
@@ -108,7 +108,6 @@ Each ends in something runnable. **Done when** is the definition of done.
 - [ ] Fixes T1 (comment), T2, T3, T4, T5, T6, T7, plus C6 `effective_time` and C12 panel rekey. One commit per ID.
 - [ ] Audit schema (D13): `terms_audit_event`; capture triggers on `code_system_version`, `code_system_enablement`, `value_set` and `terms_job`; a `SECURITY DEFINER` writer; an update/delete guard; grants. `activate_version()`/`rollback_version()` read the actor from `terms.actor`. These are new migrations if `001`–`015` have been applied anywhere you care about; otherwise edit in place.
 - [ ] `internal/platform/db/migratetest`: testcontainers-go (`postgres:18`) + tern's `migrate` library. Applies `migrations/terminology` up → down to 0 → up.
-- [ ] Port `docs/plan-evidence/behavior.sql` to Go tests: activation; rollback incl. the DOS case (T3); date-of-service resolution across Oct 1 and Apr 1; the validity trigger; the partition load recipe incl. the per-partition `module_id` FK; retire (T1); the delete guard (T2); enablement (T7).
 - [ ] Audit tests: an activation with `terms.actor` set records the actor, before/after status and a DB-clock timestamp; a change made with no `terms.actor` (simulated `psql`) is recorded with `source = 'db'` and the DB role; `UPDATE`/`DELETE`/`TRUNCATE` on `terms_audit_event` fail for the app and import roles.
 - [ ] `internal/terms/store/sqlc.yaml` (schema = `migrations/terminology`) with one smoke query.
 
