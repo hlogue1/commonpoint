@@ -162,7 +162,7 @@ Check every non-`urn:commonpoint:cs:` URI against terminology.hl7.org (THO) once
 **Rule to put in CLAUDE.md:** every table for SNOMED, RxNorm, LOINC and NCIt is partitioned by `version_id`. Small systems (CVX, SOP, NUCC, …) stay unpartitioned and are retired by `DELETE … WHERE version_id = $1`.
 The same applies to `ncit_parent` and `ncit_closure`: NCIt is large and deep, so its closure should be partitioned.
 
-### P2 — Trigram indexes on unpartitioned, multi-version tables
+### P2 — Trigram indexes on unpartitioned, multi-version tables ✅ resolved (031: `btree_gin`, `gin (version_id, col gin_trgm_ops)` on the six unpartitioned tables)
 On an unpartitioned table, `gin (long_desc gin_trgm_ops)` indexes every version together, so a search filtered to one version still walks the other versions' entries. With `btree_gin`, use `gin (version_id, long_desc gin_trgm_ops)`. Partitioned tables don't need this, because pruning already isolates the version.
 
 ### P3 — Hierarchy strategy per system
