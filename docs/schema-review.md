@@ -138,7 +138,7 @@ The CMS HCPCS Level II file includes `D` codes, which are ADA CDT content. Unles
 ### C10 — ICD-10-CM hierarchy stops at 3-character categories ✅ resolved (028: `icd10_chapter`, `icd10_section`, `icd10_code.section_id`)
 The code regex can't hold chapter ranges or blocks (`E08-E13`), so `parent_code` is NULL for every category. Traverse/Subsumes can't answer "is E11.9 in E08-E13?", and pickers can't browse by block. Add `icd10_section(version_id, id text, chapter smallint, first_code, last_code, title)` and give categories a `section_id`.
 
-### C11 — LOINC has no hierarchy
+### C11 — LOINC has no hierarchy ✅ resolved (029: `loinc_hierarchy` + `loinc_closure` + `loinc_subsumes()`, filled by the M6 loader)
 Without the multiaxial hierarchy (LOINC's accessory files), `Subsumes`/`Traverse` for LOINC can't work, and neither can `is-a` filters in value sets (Phase 5). Add `loinc_hierarchy(version_id, path_to_root, sequence, immediate_parent, code, code_text)` plus a closure, or confirm you'll treat LOINC as flat at first.
 
 ### C12 — `loinc_panel_member` primary key
