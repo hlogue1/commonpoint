@@ -71,7 +71,7 @@ func fakeSHA(label string) string {
 	return string(b)
 }
 
-// newVersion inserts a ready, staged version and returns its id. validity is a daterange
+// newVersion inserts a ready, validated, staged version and returns its id. validity is a daterange
 // literal, or "" for an undated code system.
 func newVersion(t *testing.T, conn *pgx.Conn, system, version, validity string) string {
 	t.Helper()
@@ -80,7 +80,7 @@ func newVersion(t *testing.T, conn *pgx.Conn, system, version, validity string) 
 		v = validity
 	}
 	return scalar[string](t, conn, `
-INSERT INTO code_system_version (code_system_id, version, validity, load_status, source_sha256)
-VALUES ($1, $2, $3::daterange, 'ready', $4)
+INSERT INTO code_system_version (code_system_id, version, validity, load_status, source_sha256, validated_at)
+VALUES ($1, $2, $3::daterange, 'ready', $4, '2026-11-01 00:00:00+00')
 RETURNING id::text`, system, version, v, fakeSHA(system+version))
 }

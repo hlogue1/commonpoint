@@ -74,7 +74,8 @@ Also:
 - Add the `---- create above / drop below ----` marker with down SQL, or leave it out deliberately for irreversible files.
 - `CREATE INDEX` on partitioned parents is fine inside tern's per-migration transaction. Only add `---- tern: disable-tx ----` for `CONCURRENTLY`.
 
-### B4 — `activate_version()` can activate a version that isn't loaded, and has no rollback partner
+### B4 — `activate_version()` can activate a version that isn't loaded, and has no rollback partner ✅ resolved
+Ready-check (001), `code_system` row lock and `rollback_version()` (019, T3), `validated_at` required for activation (025).
 - Add `IF (SELECT load_status FROM code_system_version WHERE id = p_version_id) <> 'ready' THEN RAISE …`.
   Also require a passing validation (add `validated_at timestamptz` to `code_system_version`, set by `ctl terms validate`).
 - Lock the `code_system` row (`SELECT … FROM code_system WHERE id = … FOR UPDATE`) instead of only the

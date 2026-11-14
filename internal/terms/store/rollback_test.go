@@ -107,3 +107,13 @@ func TestRollbackUndated(t *testing.T) {
 		t.Fatalf("2.81 after rollback: %s", got)
 	}
 }
+
+// B4: a version that hasn't passed validation can't be activated.
+func TestActivationRequiresValidation(t *testing.T) {
+	conn := migrated(t).Connect(t, migratetest.RoleMigrations)
+	v := newVersion(t, conn, "loinc", "2.82", "")
+	exec(t, conn, `UPDATE code_system_version SET validated_at = NULL WHERE id = $1`, v)
+	execErr(t, conn, "has not passed validation", `SELECT activate_version($1)`, v)
+	exec(t, conn, `UPDATE code_system_version SET validated_at = '2026-11-02 00:00:00+00' WHERE id = $1`, v)
+	exec(t, conn, `SELECT activate_version($1)`, v)
+}
