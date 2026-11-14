@@ -1,6 +1,6 @@
 # Terminology service (`../cmd/terms`) — working rules for Claude Code
 
-Import this from the repo-root `../CLAUDE.md` with a line `@docs/terms/CLAUDE.md`.
+Import this from the repo-root `../CLAUDE.md` with a line `@docs/CLAUDE.md`.
 
 The terminology service is a Snowstorm-like, multi-code-system terminology server. It is a
 **separate service binary** in the CommonPoint monorepo (`github.com/hlogue1/commonpoint`), with

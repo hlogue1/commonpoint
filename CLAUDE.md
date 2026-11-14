@@ -11,7 +11,7 @@ which runs as an outside service. Validating its tokens is in scope; building or
 The terms service runs on PostgreSQL 18 only (no Doltgres). If a task seems to need an out-of-scope change,
 stop and ask.
 
-@docs/terms/CLAUDE.md
+@docs/CLAUDE.md
 
 ## Repo-wide rules
 - Conventional Commits, scoped (`fix(terms-schema): T2 …`, `feat(ctl-terms): …`). Reference the finding ID when fixing one.
