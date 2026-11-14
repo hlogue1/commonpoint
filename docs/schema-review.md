@@ -135,7 +135,7 @@ The regex accepts the `M` suffix (Administrative MAAA codes), but `cpt_code_type
 ### C9 — HCPCS D-codes vs CDT ✅ resolved (027: `hcpcs_code` rejects `D%`; the loader skips them)
 The CMS HCPCS Level II file includes `D` codes, which are ADA CDT content. Unless the `cdt` license is enabled, the HCPCS loader should skip `D%` codes, or store them without ADA descriptors, so CDT content can't arrive through the "open" HCPCS tier. Check the current CMS file's ADA notice.
 
-### C10 — ICD-10-CM hierarchy stops at 3-character categories
+### C10 — ICD-10-CM hierarchy stops at 3-character categories ✅ resolved (028: `icd10_chapter`, `icd10_section`, `icd10_code.section_id`)
 The code regex can't hold chapter ranges or blocks (`E08-E13`), so `parent_code` is NULL for every category. Traverse/Subsumes can't answer "is E11.9 in E08-E13?", and pickers can't browse by block. Add `icd10_section(version_id, id text, chapter smallint, first_code, last_code, title)` and give categories a `section_id`.
 
 ### C11 — LOINC has no hierarchy
