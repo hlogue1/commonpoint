@@ -58,7 +58,7 @@ working around it.
 
 - Go 1.26, module `github.com/hlogue1/commonpoint`
 - gRPC server per D1; protobuf via `buf` (`../buf.yaml`, `buf.gen.yaml` at repo root)
-- PostgreSQL **18** (the schema uses `uuidv7()`), database `commonpoint_terms`, schema `public` (the terminology service has its own database)
+- PostgreSQL **18** (the schema uses `uuidv7()`), database `commonpoint`, schema `public` (the terminology service has its own database)
 - `pgx/v5` + **sqlc** (queries in `internal/terms/store/queries/*.sql`; sqlc schema = `../migrations/terminology`)
 - **tern** for migrations, with version table `public.schema_version` (`deploy/db/tern-terms.conf`)
 - ECL: `github.com/antlr4-go/antlr/v4` with the official SNOMED ECL grammar vendored in `third_party/ecl-grammar/` (commit pinned)
