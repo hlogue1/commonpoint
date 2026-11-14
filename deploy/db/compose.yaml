@@ -12,7 +12,7 @@ services:
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/pg_clinical_pass
   terms-db:
-    image: registry.access.redhat.com/hi/postgresql:latest
+    image: registry.access.redhat.com/hi/postgresql:18.7-1794620596
     container_name: commonpoint-db-terms
     restart: unless-stopped
     ports:
