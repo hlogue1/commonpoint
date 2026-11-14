@@ -1,16 +1,16 @@
-# Terminology service (`cmd/terms`) — working rules for Claude Code
+# Terminology service (`../cmd/terms`) — working rules for Claude Code
 
-Import this from the repo-root `CLAUDE.md` with a line `@docs/terms/CLAUDE.md`.
+Import this from the repo-root `../CLAUDE.md` with a line `@docs/terms/CLAUDE.md`.
 
 The terminology service is a Snowstorm-like, multi-code-system terminology server. It is a
 **separate service binary** in the CommonPoint monorepo (`github.com/hlogue1/commonpoint`), with
 its own database, a gRPC API, and a FHIR R4 terminology facade. It is not a module of the
-monolith (`cmd/srv`, `internal/modules/*`), and modules must not import it. They call it over
+monolith (`../cmd/srv`, `internal/modules/*`), and modules must not import it. They call it over
 gRPC like any other client.
 
 Read, in this order:
-1. `docs/terms/ROADMAP.md`: architecture, decisions D1–D13, phases with acceptance criteria
-2. `docs/terms/schema-review.md`: required fixes to `migrations/terminology/*` (IDs B1…, C1…, P1…)
+1. `ROADMAP.md`: architecture, decisions D1–D13, phases with acceptance criteria
+2. `schema-review.md`: required fixes to `migrations/terminology/*` (IDs B1…, C1…, P1…)
 3. `migrations/terminology/*.sql`: the existing schema, which is the source of truth for table shapes
 
 ## How to work
@@ -57,12 +57,12 @@ working around it.
 ## Stack
 
 - Go 1.26, module `github.com/hlogue1/commonpoint`
-- gRPC server per D1; protobuf via `buf` (`buf.yaml`, `buf.gen.yaml` at repo root)
+- gRPC server per D1; protobuf via `buf` (`../buf.yaml`, `buf.gen.yaml` at repo root)
 - PostgreSQL **18** (the schema uses `uuidv7()`), database `commonpoint_terms`, schema `terms`
-- `pgx/v5` + **sqlc** (queries in `internal/terms/store/queries/*.sql`; sqlc schema = `migrations/terminology`)
+- `pgx/v5` + **sqlc** (queries in `internal/terms/store/queries/*.sql`; sqlc schema = `../migrations/terminology`)
 - **tern** for migrations, with version table `terms.schema_version`
 - ECL: `github.com/antlr4-go/antlr/v4` with the official SNOMED ECL grammar vendored in `third_party/ecl-grammar/` (commit pinned)
-- cobra/viper for `ctl`; `log/slog`; OpenTelemetry through `internal/platform/telemetry`
+- cobra/viper for `ctl`; `log/slog`; OpenTelemetry through `../internal/platform/telemetry`
 - Tests: `testing`, `testcontainers-go` (postgres:18), golden files
 
 ## Commands
@@ -86,7 +86,7 @@ If a command doesn't exist yet, creating it is part of Phase 0.
    release files or excerpts, not even "a few rows for a test". Fixtures are synthetic: invented
    descriptions, and SCTIDs from `tools/terms-fixturegen` with valid Verhoeff check digits.
    Well-known metadata IDs as named constants (is-a `116680003`, FSN type, language refsets…) are fine.
-   Add `/data/`, `*.zip`, `*.RRF` and `*.rrf` to `.gitignore` in Phase 0.
+   Add `/data/`, `*.zip`, `*.RRF` and `*.rrf` to `../.gitignore` in Phase 0.
 2. **Content is immutable per version.** Never `UPDATE` content tables. New content means a new
    `version_id`. Retire with DETACH + DROP (partitioned) or `DELETE … WHERE version_id` (small,
    unpartitioned systems only), following the load/retire order in `02_snomed.sql`.

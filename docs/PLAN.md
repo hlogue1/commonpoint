@@ -15,7 +15,7 @@ schema, the Doltgres build-db), and the IdP itself (`deploy/id`, `cmd/idp`). The
 service; the terms service is only an OAuth2 resource server for it (ROADMAP D10). **No Doltgres** anywhere
 in the terminology service (D12).
 
-Detailed per-phase tasks live in `docs/terms/ROADMAP.md`. This plan sequences them, folds in the verified
+Detailed per-phase tasks live in `ROADMAP.md`. This plan sequences them, folds in the verified
 findings below, and says what to do first.
 
 ---
@@ -78,7 +78,7 @@ Repo hygiene that blocks the terms work:
                          terms-db (PostgreSQL 18)          CommonPoint clinical IdP
                          incl. terms_audit_event   ◀── JWKS / introspection (outside service)
 ```
-Decisions D1–D13 in `docs/terms/ROADMAP.md`. D10 (OAuth2 resource server), D12 (PostgreSQL 18 only, no
+Decisions D1–D13 in `ROADMAP.md`. D10 (OAuth2 resource server), D12 (PostgreSQL 18 only, no
 Doltgres) and D13 (audit trail) were added or updated for this version.
 
 ### What the IdP needs to provide (confirm before M2)

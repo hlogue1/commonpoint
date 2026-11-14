@@ -1,7 +1,7 @@
 # Terminology schema review — `migrations/terminology/01..15`
 
 > **Status 2026-11-13 (repo `c18c8bf`):** most items here have since been applied in
-> `migrations/terminology/001_core.sql`–`015`: B1, B2, B3 (renamed `NNN_`), B4 (ready-check), C1 (release-relative
+> `../migrations/terminology/001_core.sql`–`015`: B1, B2, B3 (renamed `NNN_`), B4 (ready-check), C1 (release-relative
 > HCPCS activity), C2, C3 (`ccs_ml`), C4 (tiers), P1 (all big families partitioned). B5 was withdrawn (one active
 > version per instance). **Open items and newly verified bugs are tracked in `docs/PLAN.md` §2 (T1–T8)**, which
 > supersedes this file for planning. It's kept for its rationale.
