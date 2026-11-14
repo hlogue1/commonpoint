@@ -111,7 +111,8 @@ Every `code_system` row gets the default `false`. Set it `true` at least for `ic
 ### C3 — CCS codes collide in `concept_index`
 The `ccs` branch emits `kind || ':' || code`, but the PK includes `scheme`. Single-level and multi-level CCS both use small integers at the top level (`dx:1` exists in both), so `lookup('ccs','dx:1')` returns two rows. Either make `ccs_single` and `ccs_multi` separate code systems (cleanest, since they really are different classifications), or include the scheme in the code.
 
-### C4 — License tiers
+### C4 — License tiers ✅ resolved
+`rxnorm` and `snomed` are `umls` (001); `nanda_elsevier` split into `nanda_i` and `elsevier` (030). Per-edition tiers aren't needed while one instance serves one deployment.
 - `rxnorm` is tagged `open`. As far as I know, the **full** RxNorm monthly release requires a UMLS license, and only the "Current Prescribable Content" subset doesn't. Tag it `umls`, or split prescribable into its own tier.
 - `snomed` is tagged `snomed_affiliate`. A US deployment gets the US Edition through the UMLS license (the US is a SNOMED member country). Use `umls` for US deployments and keep `snomed_affiliate` for non-member use. Consider making the tier a property of the **version/edition**, not the code system.
 - The `nanda_elsevier` tier name: NANDA-I and NIC/NOC have different publishers, so a combined tier makes per-publisher license tracking harder. Minor, but cheap to split now.

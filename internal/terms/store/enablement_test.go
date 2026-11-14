@@ -44,3 +44,15 @@ func TestLookupAfterSeed(t *testing.T) {
 		t.Fatalf("lookup display = %q", got)
 	}
 }
+
+// C4: NANDA-I and NIC/NOC are tracked under their own licensors' tiers.
+func TestNursingLicenseTiers(t *testing.T) {
+	conn := migrated(t).Connect(t, migratetest.RoleMigrations)
+	got := scalar[string](t, conn, `SELECT string_agg(id || '=' || license_tier_id, ',' ORDER BY id) FROM code_system WHERE id IN ('nanda', 'nic', 'noc')`)
+	if got != "nanda=nanda_i,nic=elsevier,noc=elsevier" {
+		t.Fatalf("tiers: %s", got)
+	}
+	if n := scalar[int](t, conn, `SELECT count(*) FROM license_tier_option WHERE id = 'nanda_elsevier'`); n != 0 {
+		t.Fatal("nanda_elsevier tier still exists")
+	}
+}
