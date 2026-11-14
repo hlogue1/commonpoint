@@ -10,15 +10,15 @@ gRPC like any other client.
 
 Read, in this order:
 1. `ROADMAP.md`: architecture, decisions D1–D13, phases with acceptance criteria
-2. `schema-review.md`: required fixes to `migrations/terminology/*` (IDs B1…, C1…, P1…)
-3. `migrations/terminology/*.sql`: the existing schema, which is the source of truth for table shapes
+2. `migrations/terminology/*.sql`: the existing schema, which is the source of truth for table shapes
+3. `terms/partition-lifecycle.md`: how content partitions are installed and retired
 
 ## How to work
 
 - One roadmap phase at a time, in order. Within a phase, take the next unchecked item,
   implement it with tests, and tick it in `ROADMAP.md` in the same commit.
 - A phase is done only when its **Done when** criteria pass. Say so, then stop for review.
-- Schema fixes reference their review ID in the commit message: `fix(terms-schema): B2 staged status + nullable validity`.
+- Schema fixes reference their finding ID (`PLAN.md` §2) in the commit message: `fix(terms-schema): T2 refuse deleting a version with partitions`.
 - Don't add infrastructure the roadmap doesn't call for (no Elasticsearch, Redis, Kafka, ORMs).
   If you think something is needed, write `docs/terms/adr/NNNN-title.md` and ask.
 - Decisions D1–D13 are settled. Challenge one only through an ADR.
@@ -89,11 +89,11 @@ If a command doesn't exist yet, creating it is part of Phase 0.
    Add `/data/`, `*.zip`, `*.RRF` and `*.rrf` to `../.gitignore` in Phase 0.
 2. **Content is immutable per version.** Never `UPDATE` content tables. New content means a new
    `version_id`. Retire with DETACH + DROP (partitioned) or `DELETE … WHERE version_id` (small,
-   unpartitioned systems only), following the load/retire order in `02_snomed.sql`.
+   unpartitioned systems only), following the install/retire order in `terms/partition-lifecycle.md`.
 3. **Every content query is scoped by `version_id`.** A content query without it is a bug. Add a test
    helper that runs `EXPLAIN` and fails if a partitioned table scans more than one partition.
 4. **Version resolution goes through `internal/terms/resolve`, always.** No provider picks a version
-   itself. `resolve` may call the SQL resolver function (`resolve_version`, review B2/C5), but nothing
+   itself. `resolve` may call the SQL resolver function (`version_for_date_by_id`), but nothing
    else in the service reads `active_version` or calls `lookup()` / `validate_code()` from
    `15_ix_concept.sql`. Those are for ad-hoc SQL only.
 4a. **One active version per code system per instance.** Never add per-environment version selection

@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
--- Cluster-level setup for the terminology database (review finding T6). Run once per
+-- Cluster-level setup for the terminology database (finding T6 in docs/PLAN.md). Run once per
 -- PostgreSQL cluster as a superuser, before the first tern migration. It is idempotent.
 -- Roles are cluster-wide, so they can't be created by a per-database tern migration.
 --

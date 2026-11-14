@@ -1,7 +1,7 @@
 # CommonPoint Terminology Service: architecture & roadmap
 
 Status: draft v0.3 (2026-11-13). Reconciled with the existing DDL, the monorepo layout, and the one-active-version-per-instance decision.
-Owner: Harley · Working rules for Claude Code: `CLAUDE.md` · Schema fixes: `docs/terms/schema-review.md`
+Owner: Harley · Working rules for Claude Code: `CLAUDE.md`
 
 ---
 
@@ -40,9 +40,9 @@ ECL refinements and filters · RF2 layering correctness · search relevance · S
 | D1 | **Go**, in the existing module. Server stack: **first read `../internal/platform/grpc`**. If it's built on `google.golang.org/grpc`, use grpc-go for `terms` and add Connect only when a browser client needs it. If it's empty, use `connectrpc.com/connect` (gRPC + gRPC-Web + JSON from one `net/http` mux, which also hosts `/fhir`). | Matches the existing platform layer. Connect wins only if nothing exists yet. |
 | D2 | `buf` for lint, breaking checks and codegen. Protos in `../api/proto`, Go output in `api/gen/go`. | One contract for every client. |
 | D3 | Keep the existing **per-code-system table sets** (`migrations/terminology/02..14`). | Already decided. Each model stays native. |
-| D4 | **Partition rule:** every table for SNOMED, RxNorm, LOINC and NCIt is `PARTITION BY LIST (version_id)` (review P1). Small systems stay unpartitioned and are retired by `DELETE … WHERE version_id`. | Retiring the big systems becomes DETACH + DROP instead of multi-million-row deletes. |
+| D4 | **Partition rule:** every table for SNOMED, RxNorm, LOINC and NCIt is `PARTITION BY LIST (version_id)`. Small systems stay unpartitioned and are retired by `DELETE … WHERE version_id`. | Retiring the big systems becomes DETACH + DROP instead of multi-million-row deletes. |
 | D5 | **One active version per code system per terminology instance.** Different versions for different CommonPoint environments = different terminology environments. Promotion TST→PRD is done by a separate ETL (out of scope for now), not with packaged artifacts; there is no `ctl terms package`. | Keeps the schema's single-active model and a simple mental model. |
-| D6 | **Version resolution** per code system: `explicit` pin (must be ready) → for date-of-service (DOS) systems, the active/superseded version whose validity contains `date_of_service` → else the active version (review B2). Implemented once in `internal/terms/resolve`, cached and invalidated on activate/rollback via `LISTEN/NOTIFY`. | Every answer is reproducible and auditable. |
+| D6 | **Version resolution** per code system: `explicit` pin (must be ready) → for date-of-service (DOS) systems, the active/superseded version whose validity contains `date_of_service` → else the active version. Implemented once in `internal/terms/resolve`, cached and invalidated on activate/rollback via `LISTEN/NOTIFY`. | Every answer is reproducible and auditable. |
 | D6a | **Cross-instance identity** is `(code_system_id, version, source_sha256)`. `version_id` never leaves the instance (expansion ids, cache keys, audit, diff reports). | Per-install `uuidv7()`s differ between TST-terms and PRD-terms. |
 | D7 | DB roles `cp_terms_migrations` / `cp_terms_import` / `cp_terms_app`. The app role can't modify content. | Least privilege on the serving path. |
 | D8 | **sqlc + pgx**, with the sqlc schema read from `../migrations/terminology` (tern format). No ORM. | Explicit SQL ownership. |
@@ -109,8 +109,8 @@ type Provider interface {
 Each phase ends in something runnable. **Done when** is the definition of done.
 
 ### Phase 0: Skeleton + schema fixes
-- [ ] Verify how tern sees `../migrations/terminology` (`tern status`). Rename to `NNN_name.sql` if needed (B3). Add `deploy/db/tern-terms.conf` (DB `commonpoint_terms`, version table `terms.schema_version`, `search_path=terms`).
-- [ ] Apply the schema review in this order, one commit per ID: **B2, B4, C5, C1, C2, C3, P1, P5**, then C6, C7, C8, C12, P2, plus the B5 identity items (`UNIQUE (code_system_id, version)`, `source_sha256`, `activated_at`, `validated_at`). (B1 is done; C4, C9–C11, C13, C14 are tracked as Phase 5 tasks.)
+- [x] tern loads `../migrations/terminology` (`NNN_name.sql`; the migration tests apply it up → down → up). `deploy/db/tern-terms.conf` sets version table `public.schema_version`; the terminology database keeps its objects in schema `public`.
+- [x] Schema fixes: staged status and date-of-service validity, release-relative HCPCS activity, separate `ccs_ml`, partitioned families (`001`–`015`); version identity (`UNIQUE (code_system_id, version)`, `source_sha256`, `activated_at`, `validated_at`), audit, rollback, roles and the remaining fixes (`016`–`032`). See `PLAN.md` §2.
 - [ ] New migration for job tables: `terms_job(id uuid, kind, state, version_id, phase, progress, issues jsonb, started_by, …)` with a `SKIP LOCKED` queue; `version_activation_log` (who/when/reason for every activate and rollback); plus `value_set(url, version, status, definition jsonb)` and `expansion_cache`.
 - [ ] Roles and grants (D7) in a migration, parameterized via tern data variables.
 - [ ] `../buf.yaml` / `buf.gen.yaml` at the root; generate into `api/gen/go`; pick the server stack per D1 and record it in `docs/terms/adr/0001-server-stack.md`.
@@ -136,7 +136,7 @@ Each phase ends in something runnable. **Done when** is the definition of done.
 **Done when:** the fixture installs with golden counts and closure; reinstalling the same source creates a new version and leaves the old one untouched; `clean` fully removes a version (no orphan partitions or rows); a real US Edition install passes validation (timing in `docs/terms/benchmarks.md`).
 
 ### Phase 2: Activation, resolution, SNOMED reads
-- [ ] `ActivateVersion`, `RollbackVersion`, `ListVersions` over `activate_version()` / `rollback_version()` (review B4), each logged to `version_activation_log` and audited. Wire `ctl terms activate|rollback`.
+- [ ] `ActivateVersion`, `RollbackVersion`, `ListVersions` over `activate_version()` / `rollback_version()`, each logged to `version_activation_log` and audited. Wire `ctl terms activate|rollback`.
 - [ ] `internal/terms/resolve` per D6, with cache invalidation on `NOTIFY terms_version_changed`.
 - [ ] `SnomedService`: `GetConcept`, `BatchGetConcepts`, `Traverse` (4 directions, paged), `ListRelationships`, `ListRefsetMembers`, `GetHistoricalAssociations`.
 - [ ] `TerminologyService` for SNOMED: `Lookup`, `BatchLookup`, `Subsumes`, `ValidateCode` (no value set yet), `ListCodeSystems`.

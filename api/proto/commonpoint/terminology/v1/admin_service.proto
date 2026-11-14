@@ -132,7 +132,7 @@ message GetJobRequest {
   string job_id = 1;
 }
 
-// Mirrors terms.code_system_status (with 'staged' added, see schema review B2).
+// Mirrors the code_system_status enum in migrations/terminology/001_core.sql.
 enum VersionStatus {
   VERSION_STATUS_UNSPECIFIED = 0;
   VERSION_STATUS_STAGED = 1;
