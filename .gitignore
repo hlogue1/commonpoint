@@ -37,3 +37,7 @@ go.work.sum
 *.zip
 *.RRF
 *.rrf
+
+# OS / editor
+.DS_Store
+.idea/
