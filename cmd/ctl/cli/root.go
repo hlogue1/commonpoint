@@ -17,7 +17,6 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "ctl",
 	Short: "CommonPoint EHR Control Interface",
-	Args:  cobra.ExactArgs(1),
 }
 
 func Execute() {

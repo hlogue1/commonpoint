@@ -93,9 +93,9 @@ The single-active model stays. Two consequences carried into the design:
   version by `(code_system_id, version, source_sha256)`, never by `version_id`. Consider
   `UNIQUE (code_system_id, version)` plus a stored `source_sha256` so the same release can't be
   installed twice under different contents.
-- **Promotion = reinstall.** Moving a version from TST to PRD means installing the same source in the
-  PRD terminology environment. The installer must be deterministic, and `ctl terms validate` should
-  compare row counts and a content checksum against the TST install.
+- **Promotion** between terminology environments is done by a separate ETL (decided 2026-11-13; out of
+  scope for the service, no packaged artifacts). The installer must still be deterministic, so the same
+  release gives the same row counts and content checksum in every terminology environment.
 
 ---
 

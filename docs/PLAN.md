@@ -11,7 +11,8 @@ the shared Go plumbing it needs (`internal/platform/{cfg,db,grpc,telemetry}`), *
 against the CommonPoint clinical IdP, and an **append-only audit trail** of who changed what and when.
 
 **Out of scope:** the core migrations (`migrations/##-cp-core-*.sql`), build (`ctl build`, the `build`
-schema, the Doltgres build-db), and the IdP itself (`deploy/id`, `cmd/idp`). The IdP runs as an outside
+schema, the Doltgres build-db), the IdP itself (`deploy/id`, `cmd/idp`), and **promotion between terminology
+environments** (TST → PRD), which a separate ETL will do (no packaged artifacts, no `ctl terms package`). The IdP runs as an outside
 service; the terms service is only an OAuth2 resource server for it (ROADMAP D10). **No Doltgres** anywhere
 in the terminology service (D12).
 
@@ -26,7 +27,7 @@ findings below, and says what to do first.
 |---|---|
 | `migrations/terminology/` (15 files, ~100 tables) | Applies cleanly; down → up round-trips with 0 leftovers (verified). Versioning implemented: staged/active/superseded/retired, date-of-service validity + trigger, `activate_version()` with ready-check and range trimming. All big families are partitioned. |
 | `cmd/terms` | `package main` only, with no `func main`. `go build ./...` fails (on the other `cmd/*` stubs too). |
-| `cmd/ctl terms` | 8 verbs wired in cobra (`activate clean impact ingest install package rollback validate`), no behavior. `package` = "Export terminology artifact". |
+| `cmd/ctl terms` | Verbs wired in cobra (`activate clean formats impact ingest inspect install rollback validate`). `ingest`, `inspect` and `formats` work locally (see M3); the rest have no behavior. `package` was removed: promotion is an ETL (out of scope). |
 | `internal/platform/*` | Empty directories. |
 | `api/proto/…/terminology/v1` | Draft protos, compile, **untracked**; no `buf.yaml` in the repo. |
 | `deploy/db` `terms-db` | `postgresql:latest`. The schema needs **PG 18** (`uuidv7()`). |
@@ -101,7 +102,7 @@ Each ends in something runnable. **Done when** is the definition of done.
 - [ ] Root `CLAUDE.md` (provided)
 - [ ] CI (`make ci` or GitHub Actions): `go build ./...`, `go vet ./...`, `staticcheck`, `buf lint`, `buf breaking` (once `api/` is on main)
 
-**Done when:** `go build ./... && go vet ./...` pass; `go run ./cmd/ctl terms --help` lists 8 verbs; `buf lint` clean.
+**Done when:** `go build ./... && go vet ./...` pass; `go run ./cmd/ctl terms --help` lists the verbs; `buf lint` clean.
 
 ### M1: Terminology schema becomes a tested foundation (3–5 days)
 - [ ] Fixes T1 (comment), T2, T3, T4, T5, T6, T7, plus C6 `effective_time` and C12 panel rekey. One commit per ID.
@@ -127,6 +128,14 @@ Each ends in something runnable. **Done when** is the definition of done.
 **Done when:** `cmd/terms` starts against the M1 schema; against the fake issuer, no token → `Unauthenticated`; a wrong audience or expired token → `Unauthenticated`; a valid token without the required scope → `PermissionDenied` plus a `denied` audit row; a valid token with the scope reaches `Unimplemented`; a test asserts every registered RPC has a scope entry.
 
 ### M3: Loader framework + SNOMED (ROADMAP Phase 1, ~1–1.5 weeks)
+- [x] Release readers and ingest verification, pulled forward on request (2026-11-13): `internal/terms/loader/{source,tabular,format,ingest}`.
+      Sources are zip, directory or file, with split/gzipped RRF parts, BOM/UTF-16 and a SHA-256 identity. Vendor formats: SNOMED RF2
+      Snapshot (layered editions), LOINC CSV, RxNorm RRF, ICD-10-CM order + tabular XML, ICD-10-PCS, HCPCS ANWEB, CPT data
+      files, CDC CVX/MVX, NUCC CSV, MedDRA ASCII, FHIR CodeSystem JSON. UMLS: Metathesaurus RRF filtered by SAB, checked
+      against MRFILES. `ctl terms ingest|inspect|formats` verify locally and write a deterministic manifest
+      (= StartIngest fields + per-file checksums/counts). Not yet: registration via `StartIngest` (needs M2), and the
+      `TODO(verify)` layouts (HCPCS past the short description, CPT separator, CDC columns, MedDRA release file, some SABs),
+      which get checked against real releases.
 - [ ] Job table + `SKIP LOCKED` worker; `StartIngest`/`StartInstall`/`GetJob`/`WatchJob`
 - [ ] Generic partition installer (create `LIKE` → CHECK → `COPY` → PK/indexes → `ANALYZE` → FKs → `ATTACH` in dependency order) and retirer (T1 order), with cleanup on failure
 - [ ] SNOMED RF2 snapshot loader with International + US layering, the closure build, derived `fsn`/`semantic_tag`/`preferred_term_en_us`
@@ -136,15 +145,14 @@ Each ends in something runnable. **Done when** is the definition of done.
 
 **Done when:** the ROADMAP Phase 1 criteria pass: golden counts and closure on the fixture; reinstalling leaves the old version untouched; `clean` leaves no partitions or rows; a real US Edition installs and validates (timing recorded).
 
-### M4: Activation, resolution, SNOMED reads, promotion (ROADMAP Phase 2, ~1 week)
+### M4: Activation, resolution, SNOMED reads (ROADMAP Phase 2, ~1 week)
 - [ ] `ActivateVersion` / `RollbackVersion` over the M1 functions, audited with the caller's identity; `ctl terms activate | rollback`
 - [ ] `ListAuditEvents` + `ctl terms audit` (filter by actor, action, target, time range)
 - [ ] `internal/terms/resolve`: explicit pin → date of service → active; cache invalidated by `NOTIFY` on activation
 - [ ] SNOMED read RPCs (`GetConcept`, `BatchGetConcepts`, `Traverse`, `ListRelationships`, `ListRefsetMembers`, `GetHistoricalAssociations`) and SNOMED via `TerminologyService` (`Lookup`, `BatchLookup`, `Subsumes`, `ValidateCode`, `ListCodeSystems`)
 - [ ] `DiffVersions` (staged vs active), `ctl terms impact`
-- [ ] **`ctl terms package`**: export a validated version as a signed artifact (source archives + `source_sha256` + validation counts/checksums). `ctl terms ingest --from-package` installs it in another terminology environment and verifies the checksums match.
 
-**Done when:** ROADMAP Phase 2 criteria; activate → rollback → activate gives the expected answers with no restart, and `ctl terms audit` shows three events naming the user, with before/after status and timestamps; an install started by user A and finished by the worker is attributed to A; a package exported from one scratch instance installs into another with identical counts and checksums.
+**Done when:** ROADMAP Phase 2 criteria; activate → rollback → activate gives the expected answers with no restart, and `ctl terms audit` shows three events naming the user, with before/after status and timestamps; an install started by user A and finished by the worker is attributed to A.
 
 ### M5: Search (ROADMAP Phase 3, ~1 week)
 Typeahead over SNOMED, then over the generic provider. Relevance suite ≥ 90% top-3, p95 < 50 ms.

@@ -31,3 +31,9 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Terminology release content is never committed (docs/CLAUDE.md rule 1)
+/data/
+*.zip
+*.RRF
+*.rrf

@@ -2,18 +2,20 @@
 // Administrative API. `cmd/ctl terms <verb>` is a thin client over this service,
 // so authorization and audit live in one place:
 //
-//   ctl terms ingest    -> StartIngest      (verify + register a source archive; version row 'staged'/'loading')
+//   ctl terms ingest    -> StartIngest      (verify + register a source archive; version row 'staged'/'loading').
+//                                            Today ctl verifies locally and writes the manifest
+//                                            (internal/terms/loader/ingest); the RPC call follows M2.
 //   ctl terms install   -> StartInstall     (load partitions; load_status loading -> ready|failed)
 //   ctl terms validate  -> ValidateVersion  (integrity checks; records the result)
 //   ctl terms impact    -> DiffVersions     (what changes vs the active version, incl. value set impact)
 //   ctl terms activate  -> ActivateVersion  (supersedes the current active version)
 //   ctl terms rollback  -> RollbackVersion  (re-activates the most recently superseded version)
 //   ctl terms clean     -> RetireVersion    (detach/drop partitions; refuses the active version)
-//   ctl terms package   -> (open question: see ROADMAP §7)
+//   ctl terms inspect / formats              (local only: describe release files / list formats)
 //
-// One terminology instance = one active version per code system. Promoting a
-// version from TST to PRD means installing the same source (same sha256) in the
-// PRD terminology environment; version_id values differ between instances, so
+// One terminology instance = one active version per code system. Promotion between
+// terminology environments (TST -> PRD) is done by a separate ETL, not by this API and
+// not with packaged artifacts. version_id values differ between instances, so
 // cross-instance identity is (code_system_id, version, source_sha256).
 //
 // All mutating calls require an admin permission (OpenFGA) and emit a provenance event.
@@ -64,6 +66,8 @@ enum SourceFormat {
   SOURCE_FORMAT_FHIR_CODESYSTEM_JSON = 8;
   // Generic, per code_system_id loader registered in internal/terms/loader.
   SOURCE_FORMAT_NATIVE = 9;
+  // UMLS Metathesaurus MR*.RRF files; the content is selected by source abbreviation (SAB).
+  SOURCE_FORMAT_UMLS_RRF = 10;
 }
 
 enum JobKind {
