@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/hlogue1/commonpoint/api/gen/go
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: api/gen/go
+    opt: paths=source_relative
+  # Pick ONE server stack in Phase 0 (see ROADMAP D1):
+  - remote: buf.build/connectrpc/go
+    out: api/gen/go
+    opt: paths=source_relative
+  # - remote: buf.build/grpc/go
+  #   out: api/gen/go
+  #   opt: paths=source_relative
+  # Client targets, enable when needed (Phase 10):
+  # - remote: buf.build/community/neoeinstein-prost   # Rust (GTK client / commonpoint-core)
+  #   out: clients/rust/src/gen
+  # - remote: buf.build/community/neoeinstein-tonic
+  #   out: clients/rust/src/gen
+  # - remote: buf.build/apple/swift                   # Flex
+  #   out: clients/swift/Sources/Gen
+  # - remote: buf.build/grpc/swift
+  #   out: clients/swift/Sources/Gen
+  # - remote: buf.build/bufbuild/es                   # Angular (connect-es)
+  #   out: clients/ts/src/gen

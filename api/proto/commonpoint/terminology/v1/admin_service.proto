@@ -1,0 +1,224 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Administrative API. `cmd/ctl terms <verb>` is a thin client over this service,
+// so authorization and audit live in one place:
+//
+//   ctl terms ingest    -> StartIngest      (verify + register a source archive; version row 'staged'/'loading')
+//   ctl terms install   -> StartInstall     (load partitions; load_status loading -> ready|failed)
+//   ctl terms validate  -> ValidateVersion  (integrity checks; records the result)
+//   ctl terms impact    -> DiffVersions     (what changes vs the active version, incl. value set impact)
+//   ctl terms activate  -> ActivateVersion  (supersedes the current active version)
+//   ctl terms rollback  -> RollbackVersion  (re-activates the most recently superseded version)
+//   ctl terms clean     -> RetireVersion    (detach/drop partitions; refuses the active version)
+//   ctl terms package   -> (open question: see ROADMAP §7)
+//
+// One terminology instance = one active version per code system. Promoting a
+// version from TST to PRD means installing the same source (same sha256) in the
+// PRD terminology environment; version_id values differ between instances, so
+// cross-instance identity is (code_system_id, version, source_sha256).
+//
+// All mutating calls require an admin permission (OpenFGA) and emit a provenance event.
+
+syntax = "proto3";
+
+package commonpoint.terminology.v1;
+
+import "google/protobuf/timestamp.proto";
+import "commonpoint/terminology/v1/types.proto";
+
+service AdminService {
+  // ---- Code system versions ----
+  rpc StartIngest(StartIngestRequest) returns (Job);
+  rpc StartInstall(StartInstallRequest) returns (Job);
+  rpc GetJob(GetJobRequest) returns (Job);
+  // Server-streams progress until the job reaches a terminal state.
+  rpc WatchJob(GetJobRequest) returns (stream Job);
+  rpc ListVersions(ListVersionsRequest) returns (ListVersionsResponse);
+  rpc ValidateVersion(VersionRef) returns (CodeSystemVersion);
+  // Requires load_status = READY and a passing validation. For non-DOS systems
+  // the previous active version becomes SUPERSEDED. For DOS-versioned systems
+  // this publishes the version so date-of-service resolution can select it.
+  rpc ActivateVersion(VersionRef) returns (CodeSystemVersion);
+  // Re-activates the most recently superseded version of the same code system;
+  // the current active version returns to STAGED (still installed).
+  rpc RollbackVersion(RollbackVersionRequest) returns (CodeSystemVersion);
+  // Detach/drop partitions. Refuses the active version.
+  rpc RetireVersion(VersionRef) returns (CodeSystemVersion);
+
+  // ---- Impact analysis ----
+  rpc DiffVersions(DiffVersionsRequest) returns (stream DiffEntry);
+
+  // ---- Value set authoring ----
+  rpc PutValueSet(PutValueSetRequest) returns (ValueSetDefinition);
+  rpc PublishValueSet(PublishValueSetRequest) returns (ValueSetDefinition);
+}
+
+enum SourceFormat {
+  SOURCE_FORMAT_UNSPECIFIED = 0;
+  SOURCE_FORMAT_SNOMED_RF2_SNAPSHOT = 1;
+  SOURCE_FORMAT_LOINC_CSV = 2;
+  SOURCE_FORMAT_RXNORM_RRF = 3;
+  SOURCE_FORMAT_ICD10CM_XML = 4;
+  SOURCE_FORMAT_ICD10PCS = 5;
+  SOURCE_FORMAT_CPT_AMA = 6;
+  SOURCE_FORMAT_HCPCS_CMS = 7;
+  SOURCE_FORMAT_FHIR_CODESYSTEM_JSON = 8;
+  // Generic, per code_system_id loader registered in internal/terms/loader.
+  SOURCE_FORMAT_NATIVE = 9;
+}
+
+enum JobKind {
+  JOB_KIND_UNSPECIFIED = 0;
+  JOB_KIND_INGEST = 1;
+  JOB_KIND_INSTALL = 2;
+  JOB_KIND_VALIDATE = 3;
+  JOB_KIND_RETIRE = 4;
+}
+
+enum JobState {
+  JOB_STATE_UNSPECIFIED = 0;
+  JOB_STATE_QUEUED = 1;
+  JOB_STATE_RUNNING = 2;
+  JOB_STATE_SUCCEEDED = 3;
+  JOB_STATE_FAILED = 4;
+  JOB_STATE_CANCELLED = 5;
+}
+
+message StartIngestRequest {
+  // code_system.id, e.g. "snomed", "icd10cm".
+  string code_system_id = 1;
+  SourceFormat format = 2;
+  // Publisher's version string, e.g. "20260901", "2027", "2.81".
+  string version = 3;
+  // FHIR version URI if the system has one (SNOMED edition/version URI).
+  string fhir_version_uri = 4;
+  string release_date = 5;
+  // Date-of-service validity, "[2026-10-01,2027-04-01)". Required iff the code
+  // system is date-of-service versioned; must be empty otherwise.
+  string validity = 6;
+  // Path relative to the server's configured ingest directory. Files are never
+  // uploaded through gRPC.
+  repeated string sources = 7;
+  // SHA-256 per source, same order; verified before anything is registered.
+  repeated string sha256 = 8;
+  // Recorded in provenance (ticket / change number / free text).
+  string reason = 9;
+}
+
+message StartInstallRequest {
+  string version_id = 1;
+  string reason = 2;
+}
+
+message Job {
+  string job_id = 1;
+  JobKind kind = 2;
+  JobState state = 3;
+  string version_id = 4;
+  // Current phase, e.g. "extract", "copy:snomed_description", "closure", "attach".
+  string phase = 5;
+  int64 rows_loaded = 6;
+  float progress = 7;
+  repeated Issue issues = 8;
+  google.protobuf.Timestamp started_at = 9;
+  google.protobuf.Timestamp finished_at = 10;
+  string started_by = 11;
+}
+
+message GetJobRequest {
+  string job_id = 1;
+}
+
+// Mirrors terms.code_system_status (with 'staged' added, see schema review B2).
+enum VersionStatus {
+  VERSION_STATUS_UNSPECIFIED = 0;
+  VERSION_STATUS_STAGED = 1;
+  VERSION_STATUS_ACTIVE = 2;
+  VERSION_STATUS_SUPERSEDED = 3;
+  VERSION_STATUS_RETIRED = 4;
+}
+
+enum LoadStatus {
+  LOAD_STATUS_UNSPECIFIED = 0;
+  LOAD_STATUS_LOADING = 1;
+  LOAD_STATUS_READY = 2;
+  LOAD_STATUS_FAILED = 3;
+}
+
+message CodeSystemVersion {
+  string version_id = 1;
+  string code_system_id = 2;
+  string system = 3;
+  string version = 4;
+  string fhir_version_uri = 5;
+  string release_date = 6;
+  // Empty for systems that are not date-of-service versioned.
+  string validity = 7;
+  VersionStatus status = 8;
+  LoadStatus load_status = 9;
+  google.protobuf.Timestamp loaded_at = 10;
+  bool validated = 11;
+  repeated Issue validation_issues = 12;
+  // Row counts by table, e.g. "snomed_concept" -> 380000.
+  map<string, int64> counts = 13;
+  repeated string source_sha256 = 14;
+  string license_tier = 15;
+}
+
+message VersionRef {
+  string version_id = 1;
+  string reason = 2;
+}
+
+message ListVersionsRequest {
+  string code_system_id = 1;
+  VersionStatus status = 2;
+}
+
+message ListVersionsResponse {
+  repeated CodeSystemVersion versions = 1;
+}
+
+message DiffVersionsRequest {
+  // Empty = the active version of to_version's code system.
+  string from_version_id = 1;
+  string to_version_id = 2;
+  bool include_value_set_impact = 3;
+  // Empty = all published value sets.
+  repeated string value_sets = 4;
+}
+
+message RollbackVersionRequest {
+  string code_system_id = 1;
+  string reason = 2;
+}
+
+enum DiffChange {
+  DIFF_CHANGE_UNSPECIFIED = 0;
+  DIFF_CHANGE_ADDED = 1;
+  DIFF_CHANGE_INACTIVATED = 2;
+  DIFF_CHANGE_REACTIVATED = 3;
+  DIFF_CHANGE_DISPLAY_CHANGED = 4;
+  DIFF_CHANGE_HIERARCHY_CHANGED = 5;
+  DIFF_CHANGE_VALUE_SET_MEMBER_ADDED = 6;
+  DIFF_CHANGE_VALUE_SET_MEMBER_REMOVED = 7;
+}
+
+message DiffEntry {
+  DiffChange change = 1;
+  ConceptSummary concept = 2;
+  string old_display = 3;
+  // Suggested replacements for inactivated concepts (historical associations).
+  repeated ConceptSummary replacements = 4;
+  // Set for value-set impact entries.
+  string value_set = 5;
+}
+
+message PutValueSetRequest {
+  // Creates or replaces a DRAFT. Published versions are immutable.
+  ValueSetDefinition value_set = 1;
+}
+
+message PublishValueSetRequest {
+  string url = 1;
+  string version = 2;
+}

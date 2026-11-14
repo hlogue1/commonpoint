@@ -1,0 +1,262 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Code-system-agnostic terminology API. Shaped after the FHIR Terminology
+// Module operations so the FHIR REST facade is a thin translation layer:
+//   Lookup        -> CodeSystem/$lookup
+//   ValidateCode  -> CodeSystem/$validate-code, ValueSet/$validate-code
+//   Subsumes      -> CodeSystem/$subsumes
+//   ExpandValueSet-> ValueSet/$expand
+//   Translate     -> ConceptMap/$translate
+
+syntax = "proto3";
+
+package commonpoint.terminology.v1;
+
+import "commonpoint/terminology/v1/types.proto";
+
+service TerminologyService {
+  rpc ListCodeSystems(ListCodeSystemsRequest) returns (ListCodeSystemsResponse);
+
+  rpc Lookup(LookupRequest) returns (LookupResponse);
+  // Batch form for chart loads (e.g. resolve displays for a whole problem list).
+  rpc BatchLookup(BatchLookupRequest) returns (BatchLookupResponse);
+
+  rpc ValidateCode(ValidateCodeRequest) returns (ValidateCodeResponse);
+  // Client-streaming bulk validation for data migration / interface engines.
+  rpc StreamValidateCode(stream ValidateCodeRequest) returns (stream ValidateCodeResponse);
+
+  rpc Subsumes(SubsumesRequest) returns (SubsumesResponse);
+
+  // Typeahead / picker search across one or more code systems.
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // Paged expansion, for pickers and small value sets.
+  rpc ExpandValueSet(ExpandValueSetRequest) returns (ExpandValueSetResponse);
+  // Full expansion as a stream, for large value sets (no total materialized
+  // in memory on either side). First message is always a header.
+  rpc StreamExpandValueSet(ExpandValueSetRequest) returns (stream StreamExpandValueSetResponse);
+
+  rpc GetValueSet(GetValueSetRequest) returns (ValueSetDefinition);
+  rpc ListValueSets(ListValueSetsRequest) returns (ListValueSetsResponse);
+
+  rpc Translate(TranslateRequest) returns (TranslateResponse);
+}
+
+message ListCodeSystemsRequest {
+  TerminologyContext context = 1;
+}
+
+message CodeSystemInfo {
+  string system = 1;
+  string version = 2;
+  string name = 3;
+  string publisher = 4;
+  // e.g. "20260901". Free-form per code system.
+  string release_date = 5;
+  // Properties this code system supports in Lookup / filters.
+  repeated string supported_properties = 6;
+  bool supports_hierarchy = 7;
+  bool supports_ecl = 8;
+}
+
+message ListCodeSystemsResponse {
+  repeated CodeSystemInfo code_systems = 1;
+  // Identifies this terminology instance/environment (from server config),
+  // so callers can log which terminology environment answered.
+  string terminology_environment = 2;
+}
+
+message LookupRequest {
+  TerminologyContext context = 1;
+  string system = 2;
+  string code = 3;
+  // Properties to return; empty = server default set.
+  repeated string properties = 4;
+  // BCP-47; controls preferred display (e.g. "en-US" -> US English language refset).
+  string display_language = 5;
+}
+
+message LookupResponse {
+  Concept concept = 1;
+}
+
+message BatchLookupRequest {
+  TerminologyContext context = 1;
+  repeated Coding codings = 2;
+  repeated string properties = 3;
+  string display_language = 4;
+}
+
+message BatchLookupResult {
+  Coding requested = 1;
+  // Unset when not found; see issues.
+  Concept concept = 2;
+  repeated Issue issues = 3;
+}
+
+message BatchLookupResponse {
+  // Same order as the request.
+  repeated BatchLookupResult results = 1;
+}
+
+message ValidateCodeRequest {
+  TerminologyContext context = 1;
+  Coding coding = 2;
+  // If set, validate membership in this value set (canonical url, optional |version).
+  string value_set = 3;
+  // If true, an inactive code is reported as invalid rather than a warning.
+  bool reject_inactive = 4;
+  string display_language = 5;
+  // Caller correlation id, echoed in the response (useful for streaming).
+  string correlation_id = 6;
+}
+
+message ValidateCodeResponse {
+  bool result = 1;
+  // The correct display in display_language.
+  string display = 2;
+  bool inactive = 3;
+  repeated Issue issues = 4;
+  string correlation_id = 5;
+}
+
+message SubsumesRequest {
+  TerminologyContext context = 1;
+  string system = 2;
+  string code_a = 3;
+  string code_b = 4;
+}
+
+message SubsumesResponse {
+  SubsumptionOutcome outcome = 1;
+}
+
+message SearchRequest {
+  TerminologyContext context = 1;
+  // Free text. Word-prefix, any order ("hear att" matches "Heart attack").
+  string query = 2;
+  // Restrict to these systems; empty = all searchable systems in context.
+  repeated string systems = 3;
+  // Optional value set to search within (canonical url).
+  string value_set = 4;
+  // SNOMED CT only: ECL constraint applied before text matching.
+  string ecl = 5;
+  bool include_inactive = 6;
+  string display_language = 7;
+  int32 page_size = 8;
+  string page_token = 9;
+}
+
+message SearchHit {
+  ConceptSummary concept = 1;
+  // The designation that matched (may differ from display).
+  string matched_term = 2;
+  float score = 3;
+  // SNOMED semantic tag, e.g. "disorder"; empty for other systems.
+  string semantic_tag = 4;
+}
+
+message SearchResponse {
+  repeated SearchHit hits = 1;
+  string next_page_token = 2;
+  // Best-effort; may be an estimate for very large result sets.
+  int64 total_estimate = 3;
+}
+
+message ExpandValueSetRequest {
+  TerminologyContext context = 1;
+  oneof source {
+    // Canonical url, optionally "url|version".
+    string url = 2;
+    // Inline definition (not stored).
+    ValueSetDefinition definition = 3;
+    // Shorthand for an implicit SNOMED CT value set (fhir_vs=ecl/...).
+    string ecl = 4;
+  }
+  // Text filter applied to the expansion (FHIR $expand filter).
+  string filter = 5;
+  bool include_designations = 6;
+  bool active_only = 7;
+  string display_language = 8;
+  // Paging (ignored by StreamExpandValueSet).
+  int32 page_size = 9;
+  string page_token = 10;
+}
+
+message ExpansionHeader {
+  // Exact versions used, for reproducibility / FHIR expansion.parameter.
+  repeated CodeSystemVersionRef used_versions = 1;
+  int64 total = 2;
+  // Stable identifier of this expansion (hash of definition + versions);
+  // usable as a cache key by clients.
+  string expansion_id = 3;
+}
+
+message ExpandValueSetResponse {
+  ExpansionHeader header = 1;
+  repeated Concept concepts = 2;
+  string next_page_token = 3;
+}
+
+message StreamExpandValueSetResponse {
+  oneof item {
+    ExpansionHeader header = 1;
+    Concept concept = 2;
+  }
+}
+
+message GetValueSetRequest {
+  // "url" or "url|version"
+  string value_set = 1;
+}
+
+message ListValueSetsRequest {
+  // Substring match on url/name/title.
+  string query = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListValueSetsResponse {
+  repeated ValueSetDefinition value_sets = 1;
+  string next_page_token = 2;
+}
+
+message TranslateRequest {
+  TerminologyContext context = 1;
+  Coding source = 2;
+  // Canonical url of a ConceptMap, or empty to search all maps from
+  // source.system to target_system.
+  string concept_map = 3;
+  string target_system = 4;
+  // Patient/encounter facts for rule-based maps (SNOMED -> ICD-10-CM extended
+  // map rules use age and sex). Keys: "age_years", "sex".
+  map<string, string> map_context = 5;
+}
+
+enum MapRelationship {
+  MAP_RELATIONSHIP_UNSPECIFIED = 0;
+  MAP_RELATIONSHIP_EQUIVALENT = 1;
+  MAP_RELATIONSHIP_SOURCE_IS_NARROWER = 2;
+  MAP_RELATIONSHIP_SOURCE_IS_BROADER = 3;
+  MAP_RELATIONSHIP_RELATED_TO = 4;
+  MAP_RELATIONSHIP_NOT_RELATED_TO = 5;
+}
+
+message TranslateMatch {
+  Coding target = 1;
+  MapRelationship relationship = 2;
+  string concept_map = 3;
+  // Extended-map details (SNOMED CT complex/extended map refsets).
+  int32 map_group = 4;
+  int32 map_priority = 5;
+  string map_rule = 6;
+  string map_advice = 7;
+  // True when map_rule was evaluated against map_context and matched.
+  bool rule_satisfied = 8;
+}
+
+message TranslateResponse {
+  bool result = 1;
+  repeated TranslateMatch matches = 2;
+  repeated Issue issues = 3;
+}

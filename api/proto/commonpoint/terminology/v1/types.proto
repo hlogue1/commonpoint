@@ -1,0 +1,158 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Shared message types for the CommonPoint Terminology Service.
+//
+// Design notes:
+// - Code systems are identified by FHIR canonical URIs (e.g. http://snomed.info/sct,
+//   http://loinc.org, http://www.nlm.nih.gov/research/umls/rxnorm,
+//   http://hl7.org/fhir/sid/icd-10-cm, http://www.ama-assn.org/go/cpt).
+// - Every read request carries a TerminologyContext so results are reproducible:
+//   the same request against the same context always returns the same answer.
+
+syntax = "proto3";
+
+package commonpoint.terminology.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Selects which code system versions a request is evaluated against.
+// Resolution, per code system:
+//   1. a version listed in `explicit`, if any (must be installed and READY);
+//   2. else, for date-of-service-versioned systems (ICD-10-CM, ICD-10-PCS, CPT,
+//      HCPCS, NCCI, CDT, ...), the published version whose validity contains
+//      `date_of_service`;
+//   3. else the instance's active version.
+// A terminology instance has exactly one active version per code system.
+// CommonPoint environments that need different versions bind to different
+// terminology environments (deployment config), not to different selectors here.
+message TerminologyContext {
+  ExplicitVersions explicit = 1;
+  // ISO-8601 date (YYYY-MM-DD). Defaults to today in the server's configured
+  // time zone, resolved once per request.
+  string date_of_service = 2;
+}
+
+message ExplicitVersions {
+  repeated CodeSystemVersionRef versions = 1;
+}
+
+message CodeSystemVersionRef {
+  // Canonical URI of the code system.
+  string system = 1;
+  // Version string. For SNOMED CT this is the edition/version URI, e.g.
+  // http://snomed.info/sct/731000124108/version/20260901
+  string version = 2;
+}
+
+message Coding {
+  string system = 1;
+  string version = 2;
+  string code = 3;
+  string display = 4;
+}
+
+message Designation {
+  // BCP-47 language tag, e.g. "en-US".
+  string language = 1;
+  // e.g. SNOMED FSN / synonym / definition, LOINC LONG_COMMON_NAME.
+  Coding use = 2;
+  string value = 3;
+  // True when this designation is preferred in the requested language/dialect.
+  bool preferred = 4;
+}
+
+message Property {
+  string code = 1;
+  oneof value {
+    string value_string = 2;
+    Coding value_coding = 3;
+    bool value_boolean = 4;
+    int64 value_integer = 5;
+    double value_decimal = 6;
+    google.protobuf.Timestamp value_date_time = 7;
+  }
+}
+
+// System-agnostic concept representation (FHIR CodeSystem.concept shaped).
+message Concept {
+  Coding coding = 1;
+  bool active = 2;
+  repeated Designation designations = 3;
+  repeated Property properties = 4;
+}
+
+// Lightweight row for lists, search results and expansions.
+message ConceptSummary {
+  string system = 1;
+  string version = 2;
+  string code = 3;
+  string display = 4;
+  bool active = 5;
+}
+
+enum SubsumptionOutcome {
+  SUBSUMPTION_OUTCOME_UNSPECIFIED = 0;
+  SUBSUMPTION_OUTCOME_EQUIVALENT = 1;
+  SUBSUMPTION_OUTCOME_SUBSUMES = 2;
+  SUBSUMPTION_OUTCOME_SUBSUMED_BY = 3;
+  SUBSUMPTION_OUTCOME_NOT_SUBSUMED = 4;
+}
+
+enum IssueSeverity {
+  ISSUE_SEVERITY_UNSPECIFIED = 0;
+  ISSUE_SEVERITY_INFORMATION = 1;
+  ISSUE_SEVERITY_WARNING = 2;
+  ISSUE_SEVERITY_ERROR = 3;
+}
+
+// Mirrors FHIR OperationOutcome.issue closely enough for a lossless facade.
+message Issue {
+  IssueSeverity severity = 1;
+  // FHIR issue-type code, e.g. "code-invalid", "not-found", "business-rule".
+  string code = 2;
+  string diagnostics = 3;
+  // Path-like location, e.g. "coding.display".
+  string expression = 4;
+}
+
+// ---- Value set definitions (FHIR ValueSet.compose shaped) ----
+
+message ValueSetDefinition {
+  // Canonical URL + business version. Published definitions are immutable.
+  string url = 1;
+  string version = 2;
+  string name = 3;
+  string title = 4;
+  ValueSetStatus status = 5;
+  repeated ValueSetInclude include = 6;
+  repeated ValueSetInclude exclude = 7;
+  // Restrict to active concepts (FHIR compose.inactive = false).
+  bool active_only = 8;
+}
+
+enum ValueSetStatus {
+  VALUE_SET_STATUS_UNSPECIFIED = 0;
+  VALUE_SET_STATUS_DRAFT = 1;
+  VALUE_SET_STATUS_ACTIVE = 2;
+  VALUE_SET_STATUS_RETIRED = 3;
+}
+
+message ValueSetInclude {
+  string system = 1;
+  // Optional pin; otherwise resolved through TerminologyContext.
+  string version = 2;
+  // Enumerated codes.
+  repeated string codes = 3;
+  // Intensional filters. For SNOMED CT, use property "constraint" op "=" with
+  // an ECL expression as the value (FHIR convention).
+  repeated ValueSetFilter filters = 4;
+  // Canonical URLs of other value sets to include.
+  repeated string value_sets = 5;
+}
+
+message ValueSetFilter {
+  string property = 1;
+  // FHIR filter-operator: "=", "is-a", "descendent-of", "is-not-a",
+  // "regex", "in", "not-in", "generalizes", "exists".
+  string op = 2;
+  string value = 3;
+}

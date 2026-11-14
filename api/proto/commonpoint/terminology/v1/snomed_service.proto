@@ -1,0 +1,234 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SNOMED CT specialist API — the Snowstorm-equivalent surface. Read-only:
+// CommonPoint consumes SNOMED CT editions; it does not author them, so there
+// is no branching/authoring model here.
+
+syntax = "proto3";
+
+package commonpoint.terminology.v1;
+
+import "commonpoint/terminology/v1/types.proto";
+
+service SnomedService {
+  rpc GetConcept(GetSnomedConceptRequest) returns (SnomedConcept);
+  rpc BatchGetConcepts(BatchGetSnomedConceptsRequest) returns (BatchGetSnomedConceptsResponse);
+
+  // Paged ECL evaluation.
+  rpc EvaluateEcl(EvaluateEclRequest) returns (EvaluateEclResponse);
+  // Streaming ECL evaluation for large result sets.
+  rpc StreamEvaluateEcl(EvaluateEclRequest) returns (stream ConceptSummary);
+  // Syntax check + normalisation, no evaluation. For ECL editors in the build tools.
+  rpc ParseEcl(ParseEclRequest) returns (ParseEclResponse);
+
+  // Children / parents / ancestors / descendants.
+  rpc Traverse(TraverseRequest) returns (TraverseResponse);
+
+  rpc ListRelationships(ListRelationshipsRequest) returns (ListRelationshipsResponse);
+  rpc ListRefsetMembers(ListRefsetMembersRequest) returns (ListRefsetMembersResponse);
+
+  // For inactive concepts: historical association targets (REPLACED BY, SAME AS, ...).
+  rpc GetHistoricalAssociations(GetHistoricalAssociationsRequest) returns (GetHistoricalAssociationsResponse);
+}
+
+enum DefinitionStatus {
+  DEFINITION_STATUS_UNSPECIFIED = 0;
+  DEFINITION_STATUS_PRIMITIVE = 1;
+  DEFINITION_STATUS_FULLY_DEFINED = 2;
+}
+
+enum Acceptability {
+  ACCEPTABILITY_UNSPECIFIED = 0;
+  ACCEPTABILITY_PREFERRED = 1;
+  ACCEPTABILITY_ACCEPTABLE = 2;
+}
+
+message SnomedDescription {
+  string description_id = 1;
+  string term = 2;
+  // FSN, SYNONYM, DEFINITION.
+  string type = 3;
+  string language_code = 4;
+  bool active = 5;
+  // Keyed by language refset id (e.g. 900000000000509007 US English).
+  map<string, Acceptability> acceptability = 6;
+  string case_significance_id = 7;
+}
+
+message SnomedRelationship {
+  string relationship_id = 1;
+  string source_id = 2;
+  string type_id = 3;
+  string type_display = 4;
+  oneof target {
+    string destination_id = 5;
+    // Concrete domain value as published (e.g. "#250", "\"text\"").
+    string concrete_value = 6;
+  }
+  string destination_display = 7;
+  int32 relationship_group = 8;
+  // INFERRED or STATED (stated only if OWL axioms are loaded; later milestone).
+  string characteristic_type = 9;
+  bool active = 10;
+}
+
+message SnomedConcept {
+  string concept_id = 1;
+  bool active = 2;
+  string effective_time = 3;
+  string module_id = 4;
+  DefinitionStatus definition_status = 5;
+  string fsn = 6;
+  // Preferred term in the requested language/dialect.
+  string pt = 7;
+  string semantic_tag = 8;
+  repeated SnomedDescription descriptions = 9;
+  // Populated only when include_relationships = true.
+  repeated SnomedRelationship relationships = 10;
+  // Is-a parents, always populated (cheap and almost always needed).
+  repeated ConceptSummary parents = 11;
+  bool is_leaf = 12;
+}
+
+message GetSnomedConceptRequest {
+  TerminologyContext context = 1;
+  string concept_id = 2;
+  string display_language = 3;
+  bool include_descriptions = 4;
+  bool include_relationships = 5;
+}
+
+message BatchGetSnomedConceptsRequest {
+  TerminologyContext context = 1;
+  repeated string concept_ids = 2;
+  string display_language = 3;
+}
+
+message BatchGetSnomedConceptsResponse {
+  repeated SnomedConcept concepts = 1;
+  repeated string not_found = 2;
+}
+
+message EvaluateEclRequest {
+  TerminologyContext context = 1;
+  string ecl = 2;
+  // Paging (ignored by StreamEvaluateEcl).
+  int32 page_size = 3;
+  string page_token = 4;
+  // If false, only codes are returned (faster).
+  bool include_display = 5;
+  string display_language = 6;
+}
+
+message EvaluateEclResponse {
+  repeated ConceptSummary concepts = 1;
+  string next_page_token = 2;
+  int64 total = 3;
+}
+
+message ParseEclRequest {
+  string ecl = 1;
+  // If set, also check that referenced concepts exist and attributes are valid
+  // per the MRCM (later milestone).
+  TerminologyContext context = 2;
+  bool validate_concepts = 3;
+}
+
+message EclSyntaxError {
+  int32 line = 1;
+  int32 column = 2;
+  string message = 3;
+}
+
+message ParseEclResponse {
+  bool valid = 1;
+  repeated EclSyntaxError errors = 2;
+  // Canonical brief-syntax rendering (stable whitespace/term handling).
+  string normalized = 3;
+  repeated Issue issues = 4;
+}
+
+enum TraverseDirection {
+  TRAVERSE_DIRECTION_UNSPECIFIED = 0;
+  TRAVERSE_DIRECTION_CHILDREN = 1;
+  TRAVERSE_DIRECTION_PARENTS = 2;
+  TRAVERSE_DIRECTION_DESCENDANTS = 3;
+  TRAVERSE_DIRECTION_ANCESTORS = 4;
+}
+
+message TraverseRequest {
+  TerminologyContext context = 1;
+  string concept_id = 2;
+  TraverseDirection direction = 3;
+  string display_language = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message TraverseResponse {
+  repeated ConceptSummary concepts = 1;
+  string next_page_token = 2;
+  int64 total = 3;
+}
+
+message ListRelationshipsRequest {
+  TerminologyContext context = 1;
+  string concept_id = 2;
+  // If true, relationships where concept_id is the destination.
+  bool inbound = 3;
+  // Optional filter on attribute type.
+  string type_id = 4;
+  bool include_inactive = 5;
+  int32 page_size = 6;
+  string page_token = 7;
+}
+
+message ListRelationshipsResponse {
+  repeated SnomedRelationship relationships = 1;
+  string next_page_token = 2;
+}
+
+message RefsetMember {
+  string member_id = 1;
+  string refset_id = 2;
+  string referenced_component_id = 3;
+  bool active = 4;
+  string effective_time = 5;
+  // Additional columns by RF2 field name (e.g. "mapTarget", "mapRule").
+  map<string, string> fields = 6;
+}
+
+message ListRefsetMembersRequest {
+  TerminologyContext context = 1;
+  string refset_id = 2;
+  // Optional: members referencing this component only.
+  string referenced_component_id = 3;
+  bool include_inactive = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListRefsetMembersResponse {
+  repeated RefsetMember members = 1;
+  string next_page_token = 2;
+  int64 total = 3;
+}
+
+message GetHistoricalAssociationsRequest {
+  TerminologyContext context = 1;
+  string concept_id = 2;
+}
+
+message HistoricalAssociation {
+  // e.g. 900000000000526001 |REPLACED BY association reference set|
+  string association_refset_id = 1;
+  string association_display = 2;
+  ConceptSummary target = 3;
+}
+
+message GetHistoricalAssociationsResponse {
+  string concept_id = 1;
+  bool active = 2;
+  // e.g. "Ambiguous", "Outdated", "Erroneous" (inactivation indicator).
+  string inactivation_reason = 3;
+  repeated HistoricalAssociation associations = 4;
+}
