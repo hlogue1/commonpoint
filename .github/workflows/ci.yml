@@ -21,3 +21,5 @@ jobs:
           go-version-file: go.mod
       - name: make ci
         run: make ci BUF_AGAINST='.git#ref=refs/remotes/origin/main'
+      - name: database tests (PostgreSQL 18)
+        run: make test-db

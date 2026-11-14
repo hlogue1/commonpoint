@@ -107,7 +107,7 @@ Each ends in something runnable. **Done when** is the definition of done.
 ### M1: Terminology schema becomes a tested foundation (3–5 days)
 - [ ] Fixes T1 (comment), T2, T3, T4, T5, T6, T7, plus C6 `effective_time` and C12 panel rekey. One commit per ID.
 - [ ] Audit schema (D13): `terms_audit_event`; capture triggers on `code_system_version`, `code_system_enablement`, `value_set` and `terms_job`; a `SECURITY DEFINER` writer; an update/delete guard; grants. `activate_version()`/`rollback_version()` read the actor from `terms.actor`. These are new migrations if `001`–`015` have been applied anywhere you care about; otherwise edit in place.
-- [ ] `internal/platform/db/migratetest`: testcontainers-go (`postgres:18`) + tern's `migrate` library. Applies `migrations/terminology` up → down to 0 → up.
+- [x] `internal/platform/db/migratetest`: testcontainers-go (`postgres:18`) + tern's `migrate` library. Applies `migrations/terminology` up → down to 0 → up. Runs with `make test-db` (also in CI); roles come from `deploy/db/terms-bootstrap.sql`.
 - [ ] Audit tests: an activation with `terms.actor` set records the actor, before/after status and a DB-clock timestamp; a change made with no `terms.actor` (simulated `psql`) is recorded with `source = 'db'` and the DB role; `UPDATE`/`DELETE`/`TRUNCATE` on `terms_audit_event` fail for the app and import roles.
 - [ ] `internal/terms/store/sqlc.yaml` (schema = `migrations/terminology`) with one smoke query.
 
