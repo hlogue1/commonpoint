@@ -98,9 +98,9 @@ The terms service depends on the IdP only through these standard contracts. Conf
 Each ends in something runnable. **Done when** is the definition of done.
 
 ### M0: Green build & hygiene (½–1 day)
-- [ ] R1, R2, R3, R4, R6
-- [ ] Root `CLAUDE.md` (provided)
-- [ ] CI (`make ci` or GitHub Actions): `go build ./...`, `go vet ./...`, `staticcheck`, `buf lint`, `buf breaking` (once `api/` is on main)
+- [x] R1, R2, R3, R4, R6 (R2 and R6 were already satisfied at `a1a4855`; `terms-db` pinned to `hi/postgresql:18.7-1794620596`)
+- [x] Root `CLAUDE.md` (provided; import path fixed to `@docs/CLAUDE.md`)
+- [x] CI (`make ci` + `.github/workflows/ci.yml`): `go build ./...`, `go vet ./...`, `staticcheck`, `buf lint`, `buf breaking`. staticcheck and buf are `go tool` deps. buf lint excepts the three RPC request/response naming rules (resource-style API).
 
 **Done when:** `go build ./... && go vet ./...` pass; `go run ./cmd/ctl terms --help` lists the verbs; `buf lint` clean.
 
