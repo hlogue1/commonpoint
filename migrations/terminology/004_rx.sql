@@ -48,7 +48,6 @@ CREATE TABLE rxnorm_concept (
 ) PARTITION BY LIST (version_id);
 
 CREATE INDEX rxn_concept_tty       ON rxnorm_concept (version_id, tty);
-CREATE INDEX rxn_concept_name_trgm ON rxnorm_concept USING gin (name gin_trgm_ops);
 
 -- Every SAB=RXNORM atom from RXNCONSO, one row per RXAUI: the concept's own name plus the
 -- PSN, SY, TMSY and ET atoms that rxnorm_concept.name cannot hold. rxnorm_concept.name stays
