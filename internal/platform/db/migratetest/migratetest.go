@@ -47,7 +47,7 @@ const (
 	RoleSuper      = "postgres"
 )
 
-// VersionTable is the tern version table for the terminology migrations (see deploy/db/tern-terms.conf).
+// VersionTable is the tern version table for the terminology migrations (see deploy/db/tern.conf).
 const VersionTable = "public.schema_version"
 
 const testPassword = "migratetest"

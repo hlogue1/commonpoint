@@ -60,7 +60,7 @@ working around it.
 - gRPC server per D1; protobuf via `buf` (`../buf.yaml`, `buf.gen.yaml` at repo root)
 - PostgreSQL **18** (the schema uses `uuidv7()`), database `commonpoint`, schema `public` (the terminology service has its own database)
 - `pgx/v5` + **sqlc** (queries in `internal/terms/store/queries/*.sql`; sqlc schema = `../migrations/terminology`)
-- **tern** for migrations, with version table `public.schema_version` (`deploy/db/tern-terms.conf`)
+- **tern** for migrations, with version table `public.schema_version` (`../migrations/terminology/tern.conf`)
 - ECL: `github.com/antlr4-go/antlr/v4` with the official SNOMED ECL grammar vendored in `third_party/ecl-grammar/` (commit pinned)
 - cobra/viper for `ctl`; `log/slog`; OpenTelemetry through `../internal/platform/telemetry`
 - Tests: `testing`, `testcontainers-go` (postgres:18), golden files
@@ -69,7 +69,7 @@ working around it.
 
 ```sh
 podman compose -f deploy/db/compose.yaml up -d
-go tool tern migrate -m migrations/terminology -c deploy/db/tern-terms.conf   # create tern-terms.conf in Phase 0
+go tool tern migrate -m migrations/terminology -c deploy/db/tern.conf   # create tern.conf in Phase 0
 go tool sqlc generate -f internal/terms/store/sqlc.yaml
 buf lint && buf breaking --against '.git#branch=main' && buf generate
 go run ./cmd/terms

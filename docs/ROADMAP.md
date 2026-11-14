@@ -109,7 +109,7 @@ type Provider interface {
 Each phase ends in something runnable. **Done when** is the definition of done.
 
 ### Phase 0: Skeleton + schema fixes
-- [x] tern loads `../migrations/terminology` (`NNN_name.sql`; the migration tests apply it up → down → up). `deploy/db/tern-terms.conf` sets version table `public.schema_version`; the terminology database keeps its objects in schema `public`.
+- [x] tern loads `../migrations/terminology` (`NNN_name.sql`; the migration tests apply it up → down → up). `../migrations/terminology/tern.conf` sets version table `public.schema_version`; the terminology database keeps its objects in schema `public`.
 - [x] Schema fixes: staged status and date-of-service validity, release-relative HCPCS activity, separate `ccs_ml`, partitioned families (`001`–`015`); version identity (`UNIQUE (code_system_id, version)`, `source_sha256`, `activated_at`, `validated_at`), audit, rollback, roles and the remaining fixes (`016`–`032`). See `PLAN.md` §2.
 - [ ] New migration for job tables: `terms_job(id uuid, kind, state, version_id, phase, progress, issues jsonb, started_by, …)` with a `SKIP LOCKED` queue; `version_activation_log` (who/when/reason for every activate and rollback); plus `value_set(url, version, status, definition jsonb)` and `expansion_cache`.
 - [ ] Roles and grants (D7) in a migration, parameterized via tern data variables.
