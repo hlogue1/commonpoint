@@ -1,0 +1,99 @@
+== T1 activate a version that is still loading (expect ERROR)
+psql:/home/claude/scripts/behavior.sql:32: ERROR:  code_system_version 933a6c32-f249-4c5c-9553-e0f337a4ae5a has load_status loading; only ready versions can be activated
+CONTEXT:  PL/pgSQL function activate_version(uuid) line 20 at RAISE
+== T2 load two SNOMED versions via partition recipe, activate both in turn
+ activate_version 
+------------------
+ 
+
+ activate_version 
+------------------
+ 
+
+ version  |   status   | load_status 
+----------+------------+-------------
+ 20260301 | superseded | ready
+ 20260901 | active     | ready
+
+ undated_resolves_to_active 
+----------------------------
+ t
+
+== T3 rollback = activate_version(previous)
+ activate_version 
+------------------
+ 
+
+ version  |   status   
+----------+------------
+ 20260301 | active
+ 20260901 | superseded
+
+== T4 retire v2 by DETACH + DROP in reverse order
+psql:/home/claude/scripts/behavior.sql:54: ERROR:  removing partition "snomed_description_3597101b4bfb42399f2b5396d0adfea4" violates foreign key constraint "snomed_language_member_3597101b4_version_id_description_id_fkey"
+DETAIL:  Key (version_id, description_id)=(3597101b-4bfb-4239-9f2b-5396d0adfea4, 517038018) is still referenced from table "snomed_language_member_3597101b4bfb42399f2b5396d0adfea4".
+CONTEXT:  SQL statement "ALTER TABLE snomed_description DETACH PARTITION snomed_description_3597101b4bfb42399f2b5396d0adfea4"
+PL/pgSQL function inline_code_block line 4 at EXECUTE
+ snomed_partitions_left 
+------------------------
+                     20
+
+== T5 validity trigger (expect 2 ERRORs)
+psql:/home/claude/scripts/behavior.sql:59: ERROR:  code system icd10cm is versioned by date of service; validity is required
+CONTEXT:  PL/pgSQL function code_system_version_check_validity() line 10 at RAISE
+psql:/home/claude/scripts/behavior.sql:60: ERROR:  code system snomed is not versioned by date of service; validity must be NULL
+CONTEXT:  PL/pgSQL function code_system_version_check_validity() line 12 at RAISE
+== T6 ICD-10-CM date of service: FY2026, FY2027, then April 2027 update
+ activate_version 
+------------------
+ 
+
+ activate_version 
+------------------
+ 
+
+ activate_version 
+------------------
+ 
+
+ version |   status   |        validity         
+---------+------------+-------------------------
+ 2026    | superseded | [2025-10-01,2026-10-01)
+ 2027    | superseded | [2026-10-01,2027-04-01)
+ 2027-04 | active     | [2027-04-01,2027-10-01)
+
+     d      | resolves_to 
+------------+-------------
+ 2026-09-15 | 2026
+ 2026-10-15 | 2027
+ 2027-05-01 | 2027-04
+
+== T7 roll back the April update by re-activating 2027
+ activate_version 
+------------------
+ 
+
+ version |   status   |        validity         
+---------+------------+-------------------------
+ 2026    | superseded | [2025-10-01,2026-10-01)
+ 2027    | active     | [2026-10-01,2027-04-01)
+ 2027-04 | superseded | [2027-04-01,2027-10-01)
+
+ may_2027_resolves_to 
+----------------------
+ 2027-04
+
+== T8 untyped literal picks the URI overload
+ untyped_literal_result 
+------------------------
+ 
+
+== T9 lookup through concept_index needs an enablement row
+ rows_without_enablement 
+-------------------------
+                       0
+
+              version_id              |      display      | active 
+--------------------------------------+-------------------+--------
+ adda58b5-0f1d-4597-9f5f-cc9702ef9c7a | SNOMED CT Concept | t
+
