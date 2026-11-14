@@ -5,6 +5,12 @@
 > HCPCS activity), C2, C3 (`ccs_ml`), C4 (tiers), P1 (all big families partitioned). B5 was withdrawn (one active
 > version per instance). **Open items and newly verified bugs are tracked in `docs/PLAN.md` §2 (T1–T8)**, which
 > supersedes this file for planning. It's kept for its rationale.
+>
+> **Status 2026-11-13 (branch `m1-t-fixes`):** every item is now resolved or decided, through forward migrations
+> `016`–`032` (001–015 are applied and never edited): B4 (025), C4 (030), C5 (017), C6 (022), C7 (already in 004 as
+> `rxnorm_concept_name`), C8 (026), C9 (027), C10 (028), C11 (029), C12 (023), C14 (032), P2 (031). C13, P3 and P4
+> are guidance for the provider/loader work, recorded under each item. P5 is decided: the terminology database
+> keeps its objects in `public`.
 
 
 Reviewed: 2026-11-13, against the files as written before terminology moved into its own service.
@@ -117,13 +123,14 @@ The `ccs` branch emits `kind || ':' || code`, but the PK includes `scheme`. Sing
 - `snomed` is tagged `snomed_affiliate`. A US deployment gets the US Edition through the UMLS license (the US is a SNOMED member country). Use `umls` for US deployments and keep `snomed_affiliate` for non-member use. Consider making the tier a property of the **version/edition**, not the code system.
 - The `nanda_elsevier` tier name: NANDA-I and NIC/NOC have different publishers, so a combined tier makes per-publisher license tracking harder. Minor, but cheap to split now.
 
-### C5 — The `version_for_date` overload footgun
+### C5 — The `version_for_date` overload footgun ✅ resolved (017: `version_for_date_by_id` / `_by_uri`, finding T4)
 The comment explains it, but an untyped literal silently picks the URI overload and returns NULL. That's a bug waiting for a future caller. Rename to `version_for_date_by_uri` / `version_for_date_by_id`, or fold both into one `resolve_version(code_system_id, date)` that implements the B2 logic.
 
-### C6 — SNOMED tables don't store `effective_time`
+### C6 — SNOMED tables don't store `effective_time` ✅ resolved (022)
 ECL `effectiveTime` filters, release diffs ("what changed since our last upgrade"), and `GetConcept.effective_time` all need it. Add `effective_time date NOT NULL` to concept, description, relationship and refset members. The cost is small.
 
-### C7 — RxNorm keeps one name per RXCUI
+### C7 — RxNorm keeps one name per RXCUI ✅ resolved
+Already in `004_rx.sql` as `rxnorm_concept_name` (PSN, SY, TMSY, ET per RXCUI, partitioned, trigram-indexed).
 `rxnorm_concept(rxcui PK, tty, name)` keeps the concept-level atom and drops `PSN` (the prescribable name you want on order screens and in eRx), `TMSY` (tall-man) and `SY`. Add:
 ```sql
 CREATE TABLE rxnorm_term (version_id uuid, rxcui text, tty text REFERENCES rxnorm_tty, name text,
@@ -142,10 +149,11 @@ The code regex can't hold chapter ranges or blocks (`E08-E13`), so `parent_code`
 ### C11 — LOINC has no hierarchy ✅ resolved (029: `loinc_hierarchy` + `loinc_closure` + `loinc_subsumes()`, filled by the M6 loader)
 Without the multiaxial hierarchy (LOINC's accessory files), `Subsumes`/`Traverse` for LOINC can't work, and neither can `is-a` filters in value sets (Phase 5). Add `loinc_hierarchy(version_id, path_to_root, sequence, immediate_parent, code, code_text)` plus a closure, or confirm you'll treat LOINC as flat at first.
 
-### C12 — `loinc_panel_member` primary key
+### C12 — `loinc_panel_member` primary key ✅ resolved (023)
 Do the rekey from your TODO now (`row_id` / `parent_row_id` / `top_panel_loinc_num`). It costs nothing on an empty schema and removes a load-time failure mode whatever the file turns out to contain.
 
-### C13 — SNOMED gaps, for the backlog
+### C13 — SNOMED gaps, for the backlog 📌 backlog, documented
+Kept as known limits: `snomed_refset_member` covers simple refsets only (no member UUID, no extra columns); attribute-value refsets (inactivation reasons) and MRCM refsets arrive with the phases that need them (Phase 2 `GetHistoricalAssociations` reasons, Phase 9 ECL attribute validation), each as its own partitioned table.
 - No attribute-value refsets, so no **inactivation reason** for `GetHistoricalAssociations`.
 - `snomed_refset_member` has no member UUID and no extra columns, so it covers simple refsets only. That's fine for now; just document it.
 - No MRCM refsets, which Phase 9 (ECL attribute validation) needs.
@@ -157,7 +165,7 @@ Check every non-`urn:commonpoint:cs:` URI against terminology.hl7.org (THO) once
 
 ## Performance / operations
 
-### P1 — Partition the big SNOMED child tables too
+### P1 — Partition the big SNOMED child tables too ✅ resolved (001–015)
 `snomed_language_member`, `snomed_refset_member`, `snomed_history`, `snomed_extended_map` and `snomed_relationship_concrete` aren't partitioned. For the US Edition, language members and refset members run to millions of rows per release, so retiring a release becomes a large `DELETE` plus vacuum instead of `DETACH` + `DROP`. FKs from a partitioned table to a partitioned table work fine. Partition them and keep the same attach order.
 **Rule to put in CLAUDE.md:** every table for SNOMED, RxNorm, LOINC and NCIt is partitioned by `version_id`. Small systems (CVX, SOP, NUCC, …) stay unpartitioned and are retired by `DELETE … WHERE version_id = $1`.
 The same applies to `ncit_parent` and `ncit_closure`: NCIt is large and deep, so its closure should be partitioned.
@@ -165,11 +173,14 @@ The same applies to `ncit_parent` and `ncit_closure`: NCIt is large and deep, so
 ### P2 — Trigram indexes on unpartitioned, multi-version tables ✅ resolved (031: `btree_gin`, `gin (version_id, col gin_trgm_ops)` on the six unpartitioned tables)
 On an unpartitioned table, `gin (long_desc gin_trgm_ops)` indexes every version together, so a search filtered to one version still walks the other versions' entries. With `btree_gin`, use `gin (version_id, long_desc gin_trgm_ops)`. Partitioned tables don't need this, because pruning already isolates the version.
 
-### P3 — Hierarchy strategy per system
+### P3 — Hierarchy strategy per system 📌 decided (provider guidance)
+Closure tables exist for SNOMED, HPO, NCIt and now LOINC (029). Everything else uses recursive-CTE subsumption in the provider until a benchmark says otherwise.
 Closure tables exist for SNOMED, HPO and NCIt only. For the parent-pointer systems (ICD-10-CM, ATC, USP MMG, Mondo, Orphanet, MED-RT, Omaha, ICF, UMDNS, CDC race/ethnicity, SOP), use a generic recursive-CTE subsumption in the provider at first. Add closure tables only where benchmarks show a need. Mondo is the most likely candidate.
 
-### P4 — `concept_index` off the hot path
+### P4 — `concept_index` off the hot path 📌 decided (provider guidance)
+CLAUDE.md rule 4 already forbids the service from using `lookup()`/`validate_code()`; `concept_index` stays for ad-hoc SQL and reporting.
 A 45-branch `UNION ALL` view with function-parameter predicates works (each branch gets a cheap one-time filter), but the service no longer needs it. Each provider queries its own tables directly. Keep `concept_index` for ad-hoc SQL and reporting, and don't build RPCs on top of it.
 
-### P5 — Schema qualification
+### P5 — Schema qualification ✅ decided: schema `public`
+Terminology now has its own database, so the former `terms` schema was folded into `public`. Objects stay unqualified in `public`; tern's version table is `public.schema_version` (`deploy/db/tern-terms.conf`); SECURITY DEFINER functions pin `search_path = public, pg_temp`. The rest of this item is superseded.
 The DDL is unqualified and depends on `search_path`. Since this is now its own database, create schema `terms`, set `search_path = terms` in the tern config and in the pgx pool's `AfterConnect`, and give the three roles (migrations / import / app) explicit grants on `terms`.

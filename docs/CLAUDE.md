@@ -45,7 +45,7 @@ internal/terms/
   conceptmap/    translate, SNOMED extended-map rule evaluator
   loader/        ingest + install jobs; one loader per source format; partition attach/detach
   fhir/          R4 REST facade
-  store/         sqlc output + queries/*.sql, pool setup (search_path = terms)
+  store/         sqlc output + queries/*.sql, pool setup (search_path = public)
 migrations/terminology/NNN_name.sql            tern migrations (own version table)
 testdata/terms/                                synthetic fixtures ONLY
 tools/terms-fixturegen/                        synthetic RF2/CSV/RRF generators (valid SCTID check digits)
@@ -58,9 +58,9 @@ working around it.
 
 - Go 1.26, module `github.com/hlogue1/commonpoint`
 - gRPC server per D1; protobuf via `buf` (`../buf.yaml`, `buf.gen.yaml` at repo root)
-- PostgreSQL **18** (the schema uses `uuidv7()`), database `commonpoint_terms`, schema `terms`
+- PostgreSQL **18** (the schema uses `uuidv7()`), database `commonpoint_terms`, schema `public` (the terminology service has its own database)
 - `pgx/v5` + **sqlc** (queries in `internal/terms/store/queries/*.sql`; sqlc schema = `../migrations/terminology`)
-- **tern** for migrations, with version table `terms.schema_version`
+- **tern** for migrations, with version table `public.schema_version` (`deploy/db/tern-terms.conf`)
 - ECL: `github.com/antlr4-go/antlr/v4` with the official SNOMED ECL grammar vendored in `third_party/ecl-grammar/` (commit pinned)
 - cobra/viper for `ctl`; `log/slog`; OpenTelemetry through `../internal/platform/telemetry`
 - Tests: `testing`, `testcontainers-go` (postgres:18), golden files
