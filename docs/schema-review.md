@@ -150,7 +150,7 @@ Do the rekey from your TODO now (`row_id` / `parent_row_id` / `top_panel_loinc_n
 - `snomed_refset_member` has no member UUID and no extra columns, so it covers simple refsets only. That's fine for now; just document it.
 - No MRCM refsets, which Phase 9 (ECL attribute validation) needs.
 
-### C14 — URIs to verify
+### C14 — URIs to verify ✅ resolved (032: checked against THO v7.5.0 on 2026-11-13; `mvx` and `meddra` corrected, 7 placeholders replaced; the rest match or aren't in THO)
 Check every non-`urn:commonpoint:cs:` URI against terminology.hl7.org (THO) once, and record the check date in a comment. In particular, double-check `mvx`, `cdt`, `hgnc`, `medrt`, `mondo` and `orphanet`. Some of the `urn:commonpoint:cs:` placeholders may have THO URIs now.
 
 ---

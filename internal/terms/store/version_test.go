@@ -25,3 +25,18 @@ func TestVersionForDateByIDAndURI(t *testing.T) {
 		t.Fatalf("version_for_date overloads still exist: %d", n)
 	}
 }
+
+// C14: URIs follow THO (v7.5.0) where it lists the system.
+func TestCodeSystemURIsFollowTHO(t *testing.T) {
+	conn := migrated(t).Connect(t, migratetest.RoleMigrations)
+	for id, uri := range map[string]string{
+		"mvx":    "http://hl7.org/fhir/sid/mvx",
+		"meddra": "https://www.meddra.org",
+		"mondo":  "http://purl.obolibrary.org/obo/mondo.owl",
+		"cdt":    "http://www.ada.org/cdt",
+	} {
+		if got := scalar[string](t, conn, `SELECT uri FROM code_system WHERE id = $1`, id); got != uri {
+			t.Errorf("%s uri = %s, want %s", id, got, uri)
+		}
+	}
+}
