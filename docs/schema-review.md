@@ -132,7 +132,7 @@ CREATE TABLE rxnorm_term (version_id uuid, rxcui text, tty text REFERENCES rxnor
 ### C8 — CPT `category` enum ✅ resolved (026: `MAAA` value + category/code-shape CHECK)
 The regex accepts the `M` suffix (Administrative MAAA codes), but `cpt_code_type` has no value for them. Add `'MAAA'`, or map M codes explicitly in the loader.
 
-### C9 — HCPCS D-codes vs CDT
+### C9 — HCPCS D-codes vs CDT ✅ resolved (027: `hcpcs_code` rejects `D%`; the loader skips them)
 The CMS HCPCS Level II file includes `D` codes, which are ADA CDT content. Unless the `cdt` license is enabled, the HCPCS loader should skip `D%` codes, or store them without ADA descriptors, so CDT content can't arrive through the "open" HCPCS tier. Check the current CMS file's ADA notice.
 
 ### C10 — ICD-10-CM hierarchy stops at 3-character categories

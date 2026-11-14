@@ -28,3 +28,12 @@ func TestCPTCategories(t *testing.T) {
 	execErr(t, conn, "cpt_code_category_matches_code", ins, v, "9998M", "I")
 	execErr(t, conn, "cpt_code_category_matches_code", ins, v, "99998", "MAAA")
 }
+
+// C9: CDT content (D-codes) can't be stored under HCPCS.
+func TestHCPCSRejectsCDTCodes(t *testing.T) {
+	conn := migrated(t).Connect(t, migratetest.RoleMigrations)
+	v := billingRelease(t, conn, "hcpcs", "2027-01", "[2027-01-01,2027-04-01)")
+	const ins = `INSERT INTO hcpcs_code (version_id, code, short_desc, long_desc) VALUES ($1, $2, 'Synthetic', 'Synthetic code')`
+	exec(t, conn, ins, v, "A9999")
+	execErr(t, conn, "hcpcs_code_not_cdt", ins, v, "D9999")
+}
