@@ -37,7 +37,6 @@ services:
       KRATOS_DB_PASSWORD: ${KRATOS_DB_PASSWORD}
       POLIS_DB_PASSWORD: ${POLIS_DB_PASSWORD}
       OPENFGA_DB_PASSWORD: ${OPENFGA_DB_PASSWORD}
-      TALOS_DB_PASSWORD: ${TALOS_DB_PASSWORD}
     command: ["/bin/bash", "/db-init.sh"]
     volumes:
       - pgdata-identity:/var/lib/postgresql/data:z
@@ -186,40 +185,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-#  talos-migrate:
-#    image: oryd/talos:latest
-#    command: migrate up
-#    environment:
-#      DSN: postgres://talos:${TALOS_DB_PASSWORD}@postgres:5432/talos?sslmode=disable&max_conns=20&max_idle_conns=4
-#    depends_on:
-#      db-init:
-#        condition: service_completed_successfully
-#    networks: [ idp ]
-#    restart: "no"
-#
-#  talos:
-#    image: oryd/talos:latest
-#    restart: unless-stopped
-#    command: serve --config /etc/talos/talos.yml
-#    environment:
-#      DB_DSN: postgres://talos:${TALOS_DB_PASSWORD}@postgres:5432/talos?sslmode=disable&max_conns=20&max_idle_conns=4
-#      SECRETS_HMAC_CURRENT: ${TALOS_HMAC_SECRET}
-#    volumes:
-#      - ./talos/talos.yml:/etc/talos/talos.yml:ro,Z
-#      - talos-data:/var/lib/talos
-#    ports:
-#      - "4420:4420" # API
-#      - "4422:4422" # health (/health/alive, /health/ready)
-#    depends_on:
-#      talos-migrate:
-#        condition: service_completed_successfully
-#    networks: [ idp ]
-#    healthcheck:
-#      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:4422/health/alive" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 3
 volumes:
   pgdata-identity:
 secrets:

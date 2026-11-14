@@ -45,6 +45,5 @@ ensure_db hydra   "${HYDRA_DB_PASSWORD:-}"
 ensure_db kratos  "${KRATOS_DB_PASSWORD:-}"
 ensure_db polis   "${POLIS_DB_PASSWORD:-}"
 ensure_db openfga "${OPENFGA_DB_PASSWORD:-}"
-ensure_db talos   "${TALOS_DB_PASSWORD:-}"
 
 echo "Database setup complete."

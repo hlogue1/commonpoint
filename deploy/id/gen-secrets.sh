@@ -18,7 +18,6 @@ cat > .env <<EOF
 
 # Image versions (pin these; check release notes before bumping)
 ORY_VERSION=v26.2.0
-TALOS_VERSION=v26.2.0
 POLIS_VERSION=26.2.0
 OPENFGA_VERSION=latest
 
@@ -28,7 +27,6 @@ HYDRA_DB_PASSWORD=$(rand 32)
 KRATOS_DB_PASSWORD=$(rand 32)
 POLIS_DB_PASSWORD=$(rand 32)
 OPENFGA_DB_PASSWORD=$(rand 32)
-TALOS_DB_PASSWORD=$(rand 32)
 
 # Hydra
 HYDRA_SECRETS_SYSTEM=$(rand 48)
@@ -48,8 +46,6 @@ POLIS_ADMIN_PASSWORD=$(rand 24)
 # OpenFGA
 OPENFGA_PRESHARED_KEY=$(rand 40)
 
-# Talos (min 32 characters)
-TALOS_HMAC_SECRET=$(rand 48)
 EOF
 
 echo "Wrote .env"
